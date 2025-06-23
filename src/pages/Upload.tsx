@@ -14,6 +14,7 @@ const UploadPage = () => {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string>('');
   const [isProcessing, setIsProcessing] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
   const [progress, setProgress] = useState(0);
   const [extractedData, setExtractedData] = useState({
     licenseNumber: '',
@@ -51,6 +52,8 @@ const UploadPage = () => {
       setSelectedFile(file);
       const url = URL.createObjectURL(file);
       setPreviewUrl(url);
+      
+      console.log('File selected:', file.name, 'Size:', file.size, 'Type:', file.type);
     }
   };
 
@@ -61,11 +64,14 @@ const UploadPage = () => {
     setProgress(0);
 
     try {
+      console.log('Starting OCR processing for:', selectedFile.name);
+      
       const result = await Tesseract.recognize(
         selectedFile,
         'eng',
         {
           logger: m => {
+            console.log('OCR Progress:', m);
             if (m.status === 'recognizing text') {
               setProgress(Math.round(m.progress * 100));
             }
@@ -78,10 +84,10 @@ const UploadPage = () => {
 
       // Extract license information using regex patterns
       const licensePatterns = {
-        licenseNumber: /(?:license\s*(?:no|number)|driving\s*license)\s*:?\s*([A-Z0-9\-\s]+)/i,
-        issueDate: /(?:issue\s*date|issued\s*on)\s*:?\s*(\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4})/i,
-        expiryDate: /(?:expiry\s*date|expires\s*on|valid\s*until)\s*:?\s*(\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4})/i,
-        issuingAuthority: /(?:issued\s*by|authority)\s*:?\s*([A-Za-z\s,\.]+)/i
+        licenseNumber: /(?:license\s*(?:no|number)|driving\s*license|dl\s*no)\s*:?\s*([A-Z0-9\-\s]+)/i,
+        issueDate: /(?:issue\s*date|issued\s*on|doi)\s*:?\s*(\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4})/i,
+        expiryDate: /(?:expiry\s*date|expires\s*on|valid\s*until|doe)\s*:?\s*(\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4})/i,
+        issuingAuthority: /(?:issued\s*by|authority|government|department)\s*:?\s*([A-Za-z\s,\.]+)/i
       };
 
       const extracted = {
@@ -93,13 +99,14 @@ const UploadPage = () => {
 
       // If patterns don't match, try to find any numbers that could be license numbers
       if (!extracted.licenseNumber) {
-        const numberPattern = /([A-Z]{2}-\d{2}-\d{3}-\d{3})/;
+        const numberPattern = /([A-Z]{2}-\d{2}-\d{3}-\d{3}|\d{10,})/;
         const match = numberPattern.exec(text);
         if (match) {
           extracted.licenseNumber = match[1];
         }
       }
 
+      console.log('Extracted data:', extracted);
       setExtractedData(extracted);
       
       toast({
@@ -132,13 +139,58 @@ const UploadPage = () => {
       return;
     }
 
-    // Simulate saving to database
-    toast({
-      title: "License Saved",
-      description: "Your driving license has been successfully added to your account.",
-    });
+    setIsSaving(true);
+    console.log('Saving license data:', extractedData);
 
-    navigate('/dashboard');
+    try {
+      // Create license data object
+      const licenseData = {
+        id: Date.now().toString(),
+        licenseNumber: extractedData.licenseNumber,
+        issueDate: extractedData.issueDate,
+        expiryDate: extractedData.expiryDate,
+        issuingAuthority: extractedData.issuingAuthority,
+        image: previewUrl,
+        shared: false,
+        uploadDate: new Date().toISOString()
+      };
+
+      // Save to localStorage (in a real app, this would be saved to a database)
+      const existingLicenses = JSON.parse(localStorage.getItem('licenses') || '[]');
+      existingLicenses.push(licenseData);
+      localStorage.setItem('licenses', JSON.stringify(existingLicenses));
+      
+      console.log('License saved successfully:', licenseData);
+      
+      toast({
+        title: "License Saved Successfully",
+        description: `License ${extractedData.licenseNumber} has been added to your account.`,
+      });
+
+      // Clear form and redirect to dashboard
+      setSelectedFile(null);
+      setPreviewUrl('');
+      setExtractedData({
+        licenseNumber: '',
+        issueDate: '',
+        expiryDate: '',
+        issuingAuthority: ''
+      });
+
+      setTimeout(() => {
+        navigate('/dashboard');
+      }, 1500);
+
+    } catch (error) {
+      console.error('Save error:', error);
+      toast({
+        title: "Save Failed",
+        description: "Failed to save your license. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   return (
@@ -207,7 +259,6 @@ const UploadPage = () => {
                         variant="outline" 
                         className="flex-1"
                         onClick={() => {
-                          // In a real app, this would open camera
                           toast({
                             title: "Camera Feature",
                             description: "Camera integration will be implemented with mobile access",
@@ -355,13 +406,18 @@ const UploadPage = () => {
                   </div>
 
                   <div className="flex gap-2 pt-4">
-                    <Button type="submit" className="flex-1">
-                      Save License
+                    <Button 
+                      type="submit" 
+                      className="flex-1"
+                      disabled={isSaving}
+                    >
+                      {isSaving ? "Saving..." : "Save License"}
                     </Button>
                     <Button 
                       type="button" 
                       variant="outline"
                       onClick={() => navigate('/dashboard')}
+                      disabled={isSaving}
                     >
                       Cancel
                     </Button>
