@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from "@/components/ui/button";
@@ -6,6 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Shield, Upload, Bell, Share2, FileText, Calendar, User, LogOut, Plus } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { format, differenceInDays, parseISO } from 'date-fns';
+import RemindersModal from "@/components/RemindersModal";
 
 interface License {
   id: string;
@@ -29,6 +29,7 @@ const Dashboard = () => {
       shared: false
     }
   ]);
+  const [isRemindersOpen, setIsRemindersOpen] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -116,6 +117,7 @@ const Dashboard = () => {
           <Button 
             variant="outline" 
             className="h-24 flex flex-col items-center justify-center gap-2"
+            onClick={() => setIsRemindersOpen(true)}
           >
             <Bell className="w-6 h-6" />
             Reminders
@@ -297,6 +299,12 @@ const Dashboard = () => {
           </div>
         </div>
       </div>
+
+      <RemindersModal 
+        isOpen={isRemindersOpen}
+        onClose={() => setIsRemindersOpen(false)}
+        licenses={licenses}
+      />
     </div>
   );
 };
