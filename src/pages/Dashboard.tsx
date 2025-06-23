@@ -51,6 +51,30 @@ const Dashboard = () => {
     navigate('/');
   };
 
+  const handleRenewLicense = (licenseId: string) => {
+    toast({
+      title: "Renewal Process",
+      description: "Redirecting to license renewal portal...",
+    });
+    // In a real app, this would redirect to government renewal portal
+  };
+
+  const handleEditLicense = (licenseId: string) => {
+    navigate(`/edit-license/${licenseId}`);
+  };
+
+  const handleShareLicense = (licenseId: string) => {
+    navigate('/create-share', { state: { licenseId } });
+  };
+
+  const handleDownloadLicense = (licenseId: string) => {
+    toast({
+      title: "Download Started",
+      description: "Your license document is being prepared...",
+    });
+    // In a real app, this would generate and download the license
+  };
+
   const getExpiryStatus = (expiryDate: string) => {
     const days = differenceInDays(parseISO(expiryDate), new Date());
     if (days < 0) return { status: 'expired', color: 'text-red-600', bg: 'bg-red-50' };
@@ -82,10 +106,10 @@ const Dashboard = () => {
             </h1>
           </div>
           <div className="flex items-center gap-4">
-            <div className="flex items-center gap-2">
-              <User className="w-5 h-5 text-gray-600" />
+            <Button variant="ghost" onClick={() => navigate('/profile')}>
+              <User className="w-5 h-5 text-gray-600 mr-2" />
               <span className="text-gray-700">{user.name}</span>
-            </div>
+            </Button>
             <Button variant="outline" onClick={handleLogout}>
               <LogOut className="w-4 h-4 mr-2" />
               Logout
@@ -125,6 +149,7 @@ const Dashboard = () => {
           <Button 
             variant="outline" 
             className="h-24 flex flex-col items-center justify-center gap-2"
+            onClick={() => navigate('/shared-links')}
           >
             <Share2 className="w-6 h-6" />
             Shared Links
@@ -132,6 +157,7 @@ const Dashboard = () => {
           <Button 
             variant="outline" 
             className="h-24 flex flex-col items-center justify-center gap-2"
+            onClick={() => navigate('/all-licenses')}
           >
             <FileText className="w-6 h-6" />
             All Licenses
@@ -165,7 +191,11 @@ const Dashboard = () => {
                             Expires in {daysLeft} day{daysLeft !== 1 ? 's' : ''}
                           </p>
                         </div>
-                        <Button size="sm" variant="outline">
+                        <Button 
+                          size="sm" 
+                          variant="outline"
+                          onClick={() => handleRenewLicense(license.id)}
+                        >
                           Renew
                         </Button>
                       </div>
@@ -228,13 +258,25 @@ const Dashboard = () => {
                             </div>
                           </div>
                           <div className="flex gap-2">
-                            <Button size="sm" variant="outline">
+                            <Button 
+                              size="sm" 
+                              variant="outline"
+                              onClick={() => handleEditLicense(license.id)}
+                            >
                               Edit
                             </Button>
-                            <Button size="sm" variant="outline">
+                            <Button 
+                              size="sm" 
+                              variant="outline"
+                              onClick={() => handleShareLicense(license.id)}
+                            >
                               Share
                             </Button>
-                            <Button size="sm" variant="outline">
+                            <Button 
+                              size="sm" 
+                              variant="outline"
+                              onClick={() => handleDownloadLicense(license.id)}
+                            >
                               Download
                             </Button>
                           </div>

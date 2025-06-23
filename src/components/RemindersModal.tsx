@@ -1,9 +1,9 @@
-
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Bell, Calendar, AlertTriangle } from "lucide-react";
 import { format, differenceInDays, parseISO } from 'date-fns';
+import { useToast } from "@/hooks/use-toast";
 
 interface License {
   id: string;
@@ -22,6 +22,8 @@ interface RemindersModalProps {
 }
 
 const RemindersModal = ({ isOpen, onClose, licenses }: RemindersModalProps) => {
+  const { toast } = useToast();
+
   const getExpiryStatus = (expiryDate: string) => {
     const days = differenceInDays(parseISO(expiryDate), new Date());
     if (days < 0) return { status: 'expired', color: 'text-red-600', bg: 'bg-red-50', icon: AlertTriangle };
@@ -34,6 +36,21 @@ const RemindersModal = ({ isOpen, onClose, licenses }: RemindersModalProps) => {
     const days = differenceInDays(parseISO(license.expiryDate), new Date());
     return days <= 30;
   });
+
+  const handleSetReminder = (licenseNumber: string) => {
+    toast({
+      title: "Reminder Set",
+      description: `Custom reminder set for ${licenseNumber}`,
+    });
+  };
+
+  const handleRenewNow = (licenseNumber: string) => {
+    toast({
+      title: "Renewal Process",
+      description: `Redirecting to renewal portal for ${licenseNumber}`,
+    });
+    // In a real app, this would redirect to government renewal portal
+  };
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -90,11 +107,19 @@ const RemindersModal = ({ isOpen, onClose, licenses }: RemindersModalProps) => {
                         </div>
                       </div>
                       <div className="flex gap-2">
-                        <Button size="sm" variant="outline">
+                        <Button 
+                          size="sm" 
+                          variant="outline"
+                          onClick={() => handleSetReminder(license.licenseNumber)}
+                        >
                           <Calendar className="w-3 h-3 mr-1" />
                           Set Reminder
                         </Button>
-                        <Button size="sm" variant="outline">
+                        <Button 
+                          size="sm" 
+                          variant="outline"
+                          onClick={() => handleRenewNow(license.licenseNumber)}
+                        >
                           Renew Now
                         </Button>
                       </div>
