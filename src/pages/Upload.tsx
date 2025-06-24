@@ -1,4 +1,3 @@
-
 import { useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from "@/components/ui/button";
@@ -80,31 +79,23 @@ const UploadPage = () => {
       );
 
       const text = result.data.text;
-      console.log('OCR Text:', text);
+      console.log('Raw OCR Text:', text);
 
-      // Extract license information using regex patterns
-      const licensePatterns = {
-        licenseNumber: /(?:license\s*(?:no|number)|driving\s*license|dl\s*no)\s*:?\s*([A-Z0-9\-\s]+)/i,
-        issueDate: /(?:issue\s*date|issued\s*on|doi)\s*:?\s*(\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4})/i,
-        expiryDate: /(?:expiry\s*date|expires\s*on|valid\s*until|doe)\s*:?\s*(\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4})/i,
-        issuingAuthority: /(?:issued\s*by|authority|government|department)\s*:?\s*([A-Za-z\s,\.]+)/i
-      };
+      // Clean and preprocess the text
+      const cleanText = text
+        .replace(/\n/g, ' ')
+        .replace(/\s+/g, ' ')
+        .trim();
+      
+      console.log('Cleaned OCR Text:', cleanText);
 
+      // Enhanced extraction patterns for better matching
       const extracted = {
-        licenseNumber: licensePatterns.licenseNumber.exec(text)?.[1]?.trim() || '',
-        issueDate: licensePatterns.issueDate.exec(text)?.[1]?.trim() || '',
-        expiryDate: licensePatterns.expiryDate.exec(text)?.[1]?.trim() || '',
-        issuingAuthority: licensePatterns.issuingAuthority.exec(text)?.[1]?.trim() || 'Department of Transport Management'
+        licenseNumber: extractLicenseNumber(cleanText),
+        issueDate: extractDate(cleanText, ['issue', 'issued', 'doi']),
+        expiryDate: extractDate(cleanText, ['expiry', 'expires', 'valid until', 'doe', 'exp']),
+        issuingAuthority: extractAuthority(cleanText)
       };
-
-      // If patterns don't match, try to find any numbers that could be license numbers
-      if (!extracted.licenseNumber) {
-        const numberPattern = /([A-Z]{2}-\d{2}-\d{3}-\d{3}|\d{10,})/;
-        const match = numberPattern.exec(text);
-        if (match) {
-          extracted.licenseNumber = match[1];
-        }
-      }
 
       console.log('Extracted data:', extracted);
       setExtractedData(extracted);
@@ -125,6 +116,161 @@ const UploadPage = () => {
       setIsProcessing(false);
       setProgress(0);
     }
+  };
+
+  // Helper function to extract license number
+  const extractLicenseNumber = (text: string): string => {
+    const patterns = [
+      // Nepal license format: NP-XX-XXX-XXX
+      /NP-\d{2}-\d{3}-\d{3}/i,
+      // Alternative Nepal format: NPXX-XXXXXX
+      /NP\d{2}-\d{6}/i,
+      // General patterns
+      /(?:license\s*(?:no|number|#)|dl\s*(?:no|number|#))\s*:?\s*([A-Z0-9\-\s]{6,20})/i,
+      /(?:driving\s*license)\s*:?\s*([A-Z0-9\-\s]{6,20})/i,
+      // Look for sequences that could be license numbers
+      /([A-Z]{2,3}-?\d{2,3}-?\d{3,6})/i,
+      /([A-Z]{2}\d{8,12})/i,
+      // Fallback: any alphanumeric sequence 8-15 characters
+      /([A-Z0-9]{8,15})/i
+    ];
+
+    for (const pattern of patterns) {
+      const match = pattern.exec(text);
+      if (match) {
+        const licenseNumber = match[1] || match[0];
+        console.log('Found license number:', licenseNumber);
+        return licenseNumber.trim().replace(/\s+/g, '');
+      }
+    }
+
+    return '';
+  };
+
+  // Helper function to extract dates
+  const extractDate = (text: string, keywords: string[]): string => {
+    for (const keyword of keywords) {
+      const patterns = [
+        // DD/MM/YYYY or DD-MM-YYYY
+        new RegExp(`${keyword}\\s*:?\\s*(\\d{1,2}[\/\\-]\\d{1,2}[\/\\-]\\d{2,4})`, 'i'),
+        // YYYY/MM/DD or YYYY-MM-DD
+        new RegExp(`${keyword}\\s*:?\\s*(\\d{4}[\/\\-]\\d{1,2}[\/\\-]\\d{1,2})`, 'i'),
+        // DD MMM YYYY (e.g., 15 Jan 2025)
+        new RegExp(`${keyword}\\s*:?\\s*(\\d{1,2}\\s+[A-Za-z]{3,9}\\s+\\d{4})`, 'i'),
+        // MMM DD, YYYY (e.g., Jan 15, 2025)
+        new RegExp(`${keyword}\\s*:?\\s*([A-Za-z]{3,9}\\s+\\d{1,2},?\\s+\\d{4})`, 'i')
+      ];
+
+      for (const pattern of patterns) {
+        const match = pattern.exec(text);
+        if (match) {
+          let dateStr = match[1].trim();
+          console.log(`Found ${keyword} date:`, dateStr);
+          
+          // Try to convert to YYYY-MM-DD format
+          const convertedDate = convertToStandardDate(dateStr);
+          if (convertedDate) {
+            return convertedDate;
+          }
+          return dateStr;
+        }
+      }
+    }
+
+    return '';
+  };
+
+  // Helper function to extract issuing authority
+  const extractAuthority = (text: string): string => {
+    const patterns = [
+      /(?:issued\s*by|authority|government)\s*:?\s*([A-Za-z\s,\.]{10,50})/i,
+      /(?:department\s*of\s*transport)/i,
+      /(?:transport\s*management)/i,
+      /(?:government\s*of\s*nepal)/i
+    ];
+
+    for (const pattern of patterns) {
+      const match = pattern.exec(text);
+      if (match) {
+        const authority = match[1] || match[0];
+        console.log('Found authority:', authority);
+        return authority.trim();
+      }
+    }
+
+    // Default for Nepal
+    return 'Department of Transport Management';
+  };
+
+  // Helper function to convert various date formats to YYYY-MM-DD
+  const convertToStandardDate = (dateStr: string): string => {
+    try {
+      // Handle DD/MM/YYYY or DD-MM-YYYY
+      const ddmmyyyy = /(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})/.exec(dateStr);
+      if (ddmmyyyy) {
+        const day = ddmmyyyy[1].padStart(2, '0');
+        const month = ddmmyyyy[2].padStart(2, '0');
+        let year = ddmmyyyy[3];
+        if (year.length === 2) {
+          year = '20' + year;
+        }
+        return `${year}-${month}-${day}`;
+      }
+
+      // Handle YYYY/MM/DD or YYYY-MM-DD
+      const yyyymmdd = /(\d{4})[\/\-](\d{1,2})[\/\-](\d{1,2})/.exec(dateStr);
+      if (yyyymmdd) {
+        const year = yyyymmdd[1];
+        const month = yyyymmdd[2].padStart(2, '0');
+        const day = yyyymmdd[3].padStart(2, '0');
+        return `${year}-${month}-${day}`;
+      }
+
+      // Handle month names
+      const monthNames = {
+        'jan': '01', 'january': '01',
+        'feb': '02', 'february': '02',
+        'mar': '03', 'march': '03',
+        'apr': '04', 'april': '04',
+        'may': '05',
+        'jun': '06', 'june': '06',
+        'jul': '07', 'july': '07',
+        'aug': '08', 'august': '08',
+        'sep': '09', 'september': '09',
+        'oct': '10', 'october': '10',
+        'nov': '11', 'november': '11',
+        'dec': '12', 'december': '12'
+      };
+
+      // Handle DD MMM YYYY
+      const ddmmmyyyy = /(\d{1,2})\s+([A-Za-z]{3,9})\s+(\d{4})/.exec(dateStr);
+      if (ddmmmyyyy) {
+        const day = ddmmmyyyy[1].padStart(2, '0');
+        const monthName = ddmmmyyyy[2].toLowerCase();
+        const year = ddmmmyyyy[3];
+        const month = monthNames[monthName as keyof typeof monthNames];
+        if (month) {
+          return `${year}-${month}-${day}`;
+        }
+      }
+
+      // Handle MMM DD, YYYY
+      const mmmddyyyy = /([A-Za-z]{3,9})\s+(\d{1,2}),?\s+(\d{4})/.exec(dateStr);
+      if (mmmddyyyy) {
+        const monthName = mmmddyyyy[1].toLowerCase();
+        const day = mmmddyyyy[2].padStart(2, '0');
+        const year = mmmddyyyy[3];
+        const month = monthNames[monthName as keyof typeof monthNames];
+        if (month) {
+          return `${year}-${month}-${day}`;
+        }
+      }
+
+    } catch (error) {
+      console.error('Date conversion error:', error);
+    }
+
+    return '';
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
