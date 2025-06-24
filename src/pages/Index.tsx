@@ -3,136 +3,200 @@ import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Shield, FileText, Bell, Share2, Smartphone, Cloud } from "lucide-react";
+import { Shield, FileText, Bell, Share2, Smartphone, Cloud, Menu, X, ChevronRight, Star, Users, CheckCircle } from "lucide-react";
 
 const Index = () => {
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-red-50">
       {/* Header */}
-      <header className="border-b bg-white/80 backdrop-blur-sm sticky top-0 z-50">
+      <header className="border-b bg-white/95 backdrop-blur-md sticky top-0 z-50 shadow-sm">
         <div className="container mx-auto px-4 py-4 flex justify-between items-center">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-gradient-to-br from-blue-600 to-red-600 rounded-lg flex items-center justify-center">
+          <Link to="/" className="flex items-center gap-3 group">
+            <div className="w-10 h-10 bg-gradient-to-br from-blue-600 to-red-600 rounded-xl flex items-center justify-center shadow-lg group-hover:shadow-xl transition-all duration-300 group-hover:scale-105">
               <Shield className="w-6 h-6 text-white" />
             </div>
             <h1 className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-red-600 bg-clip-text text-transparent">
               NepLife
             </h1>
-          </div>
-          <nav className="hidden md:flex gap-6">
-            <Link to="/login" className="text-gray-600 hover:text-blue-600 transition-colors">
+          </Link>
+          
+          {/* Desktop Navigation */}
+          <nav className="hidden md:flex items-center gap-8">
+            <a href="#features" className="text-gray-600 hover:text-blue-600 transition-colors font-medium">Features</a>
+            <a href="#pricing" className="text-gray-600 hover:text-blue-600 transition-colors font-medium">Pricing</a>
+            <a href="#contact" className="text-gray-600 hover:text-blue-600 transition-colors font-medium">Contact</a>
+            <Link to="/login" className="text-gray-600 hover:text-blue-600 transition-colors font-medium">
               Login
             </Link>
             <Link to="/signup">
-              <Button>Get Started</Button>
+              <Button className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 shadow-lg hover:shadow-xl transition-all duration-300">
+                Get Started
+              </Button>
             </Link>
           </nav>
+
+          {/* Mobile Menu Button */}
+          <button 
+            className="md:hidden p-2 hover:bg-gray-100 rounded-lg transition-colors"
+            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+          >
+            {mobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+          </button>
         </div>
+
+        {/* Mobile Navigation */}
+        {mobileMenuOpen && (
+          <div className="md:hidden border-t bg-white/95 backdrop-blur-md">
+            <nav className="container mx-auto px-4 py-4 flex flex-col gap-4">
+              <a href="#features" className="text-gray-600 hover:text-blue-600 transition-colors font-medium py-2">Features</a>
+              <a href="#pricing" className="text-gray-600 hover:text-blue-600 transition-colors font-medium py-2">Pricing</a>
+              <a href="#contact" className="text-gray-600 hover:text-blue-600 transition-colors font-medium py-2">Contact</a>
+              <Link to="/login" className="text-gray-600 hover:text-blue-600 transition-colors font-medium py-2">
+                Login
+              </Link>
+              <Link to="/signup" className="mt-2">
+                <Button className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700">
+                  Get Started
+                </Button>
+              </Link>
+            </nav>
+          </div>
+        )}
       </header>
 
       {/* Hero Section */}
-      <section className="container mx-auto px-4 py-20 text-center">
-        <div className="max-w-4xl mx-auto">
-          <h2 className="text-5xl md:text-6xl font-bold mb-6 bg-gradient-to-r from-blue-600 via-purple-600 to-red-600 bg-clip-text text-transparent">
+      <section className="container mx-auto px-4 py-20 lg:py-32 text-center">
+        <div className="max-w-5xl mx-auto">
+          {/* Trust Badge */}
+          <div className="inline-flex items-center gap-2 bg-white/80 backdrop-blur-sm border border-blue-200 rounded-full px-4 py-2 mb-8 shadow-sm">
+            <Star className="w-4 h-4 text-yellow-500 fill-current" />
+            <span className="text-sm font-medium text-gray-700">Trusted by 10,000+ drivers</span>
+            <Users className="w-4 h-4 text-blue-600" />
+          </div>
+
+          <h2 className="text-4xl md:text-6xl lg:text-7xl font-bold mb-8 bg-gradient-to-r from-blue-600 via-purple-600 to-red-600 bg-clip-text text-transparent leading-tight">
             Smart Driving License Management for Nepal
           </h2>
-          <p className="text-xl text-gray-600 mb-8 max-w-2xl mx-auto">
+          <p className="text-xl md:text-2xl text-gray-600 mb-10 max-w-3xl mx-auto leading-relaxed">
             Digitize, manage, and share your driving license with AI-powered OCR technology. 
             Never miss an expiry date again with intelligent reminders.
           </p>
-          <div className="flex flex-col sm:flex-row gap-4 justify-center">
+
+          {/* CTA Buttons */}
+          <div className="flex flex-col sm:flex-row gap-6 justify-center mb-16">
             <Link to="/signup">
-              <Button size="lg" className="text-lg px-8 py-6 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700">
+              <Button size="lg" className="text-lg px-10 py-7 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 shadow-xl hover:shadow-2xl transition-all duration-300 transform hover:scale-105 rounded-xl font-semibold">
                 Start Managing Your License
+                <ChevronRight className="ml-2 w-5 h-5" />
               </Button>
             </Link>
             <Link to="/demo">
-              <Button variant="outline" size="lg" className="text-lg px-8 py-6">
+              <Button variant="outline" size="lg" className="text-lg px-10 py-7 border-2 hover:bg-gray-50 shadow-lg hover:shadow-xl transition-all duration-300 rounded-xl font-semibold">
                 Watch Demo
               </Button>
             </Link>
+          </div>
+
+          {/* Trust Indicators */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-3xl mx-auto">
+            <div className="flex items-center justify-center gap-3 text-gray-600">
+              <CheckCircle className="w-5 h-5 text-green-600" />
+              <span className="font-medium">Bank-Level Security</span>
+            </div>
+            <div className="flex items-center justify-center gap-3 text-gray-600">
+              <CheckCircle className="w-5 h-5 text-green-600" />
+              <span className="font-medium">Government Approved</span>
+            </div>
+            <div className="flex items-center justify-center gap-3 text-gray-600">
+              <CheckCircle className="w-5 h-5 text-green-600" />
+              <span className="font-medium">24/7 Support</span>
+            </div>
           </div>
         </div>
       </section>
 
       {/* Features Section */}
-      <section className="container mx-auto px-4 py-20">
-        <div className="text-center mb-16">
-          <h3 className="text-3xl font-bold mb-4">Powerful Features</h3>
-          <p className="text-gray-600 max-w-2xl mx-auto">
+      <section id="features" className="container mx-auto px-4 py-20 lg:py-32">
+        <div className="text-center mb-20">
+          <h3 className="text-4xl md:text-5xl font-bold mb-6 bg-gradient-to-r from-gray-800 to-gray-600 bg-clip-text text-transparent">
+            Powerful Features
+          </h3>
+          <p className="text-xl text-gray-600 max-w-3xl mx-auto leading-relaxed">
             Everything you need to manage your driving license digitally and securely
           </p>
         </div>
 
-        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
-          <Card className="hover:shadow-lg transition-shadow duration-300">
-            <CardHeader>
-              <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center mb-4">
-                <FileText className="w-6 h-6 text-blue-600" />
+        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8 lg:gap-12">
+          <Card className="group hover:shadow-2xl transition-all duration-500 border-0 bg-white/80 backdrop-blur-sm hover:scale-105 hover:bg-white">
+            <CardHeader className="pb-8">
+              <div className="w-16 h-16 bg-gradient-to-br from-blue-100 to-blue-200 rounded-2xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-300">
+                <FileText className="w-8 h-8 text-blue-600" />
               </div>
-              <CardTitle>AI-Powered OCR</CardTitle>
-              <CardDescription>
-                Automatically extract license details from photos using advanced OCR technology
+              <CardTitle className="text-2xl mb-4">AI-Powered OCR</CardTitle>
+              <CardDescription className="text-lg leading-relaxed">
+                Automatically extract license details from photos using advanced OCR technology with 99% accuracy
               </CardDescription>
             </CardHeader>
           </Card>
 
-          <Card className="hover:shadow-lg transition-shadow duration-300">
-            <CardHeader>
-              <div className="w-12 h-12 bg-red-100 rounded-lg flex items-center justify-center mb-4">
-                <Bell className="w-6 h-6 text-red-600" />
+          <Card className="group hover:shadow-2xl transition-all duration-500 border-0 bg-white/80 backdrop-blur-sm hover:scale-105 hover:bg-white">
+            <CardHeader className="pb-8">
+              <div className="w-16 h-16 bg-gradient-to-br from-red-100 to-red-200 rounded-2xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-300">
+                <Bell className="w-8 h-8 text-red-600" />
               </div>
-              <CardTitle>Smart Reminders</CardTitle>
-              <CardDescription>
-                Get notified before your license expires with intelligent reminder system
+              <CardTitle className="text-2xl mb-4">Smart Reminders</CardTitle>
+              <CardDescription className="text-lg leading-relaxed">
+                Get notified before your license expires with intelligent reminder system and renewal guides
               </CardDescription>
             </CardHeader>
           </Card>
 
-          <Card className="hover:shadow-lg transition-shadow duration-300">
-            <CardHeader>
-              <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center mb-4">
-                <Share2 className="w-6 h-6 text-green-600" />
+          <Card className="group hover:shadow-2xl transition-all duration-500 border-0 bg-white/80 backdrop-blur-sm hover:scale-105 hover:bg-white">
+            <CardHeader className="pb-8">
+              <div className="w-16 h-16 bg-gradient-to-br from-green-100 to-green-200 rounded-2xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-300">
+                <Share2 className="w-8 h-8 text-green-600" />
               </div>
-              <CardTitle>Secure Sharing</CardTitle>
-              <CardDescription>
-                Share your license with authorities using encrypted, time-limited links
+              <CardTitle className="text-2xl mb-4">Secure Sharing</CardTitle>
+              <CardDescription className="text-lg leading-relaxed">
+                Share your license with authorities using encrypted, time-limited links with QR codes
               </CardDescription>
             </CardHeader>
           </Card>
 
-          <Card className="hover:shadow-lg transition-shadow duration-300">
-            <CardHeader>
-              <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center mb-4">
-                <Smartphone className="w-6 h-6 text-purple-600" />
+          <Card className="group hover:shadow-2xl transition-all duration-500 border-0 bg-white/80 backdrop-blur-sm hover:scale-105 hover:bg-white">
+            <CardHeader className="pb-8">
+              <div className="w-16 h-16 bg-gradient-to-br from-purple-100 to-purple-200 rounded-2xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-300">
+                <Smartphone className="w-8 h-8 text-purple-600" />
               </div>
-              <CardTitle>Mobile Friendly</CardTitle>
-              <CardDescription>
-                Access your licenses anywhere with our responsive mobile design
+              <CardTitle className="text-2xl mb-4">Mobile Friendly</CardTitle>
+              <CardDescription className="text-lg leading-relaxed">
+                Access your licenses anywhere with our responsive mobile design and offline support
               </CardDescription>
             </CardHeader>
           </Card>
 
-          <Card className="hover:shadow-lg transition-shadow duration-300">
-            <CardHeader>
-              <div className="w-12 h-12 bg-yellow-100 rounded-lg flex items-center justify-center mb-4">
-                <Shield className="w-6 h-6 text-yellow-600" />
+          <Card className="group hover:shadow-2xl transition-all duration-500 border-0 bg-white/80 backdrop-blur-sm hover:scale-105 hover:bg-white">
+            <CardHeader className="pb-8">
+              <div className="w-16 h-16 bg-gradient-to-br from-yellow-100 to-yellow-200 rounded-2xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-300">
+                <Shield className="w-8 h-8 text-yellow-600" />
               </div>
-              <CardTitle>Bank-Level Security</CardTitle>
-              <CardDescription>
-                Your documents are protected with enterprise-grade encryption
+              <CardTitle className="text-2xl mb-4">Bank-Level Security</CardTitle>
+              <CardDescription className="text-lg leading-relaxed">
+                Your documents are protected with enterprise-grade encryption and secure cloud storage
               </CardDescription>
             </CardHeader>
           </Card>
 
-          <Card className="hover:shadow-lg transition-shadow duration-300">
-            <CardHeader>
-              <div className="w-12 h-12 bg-indigo-100 rounded-lg flex items-center justify-center mb-4">
-                <Cloud className="w-6 h-6 text-indigo-600" />
+          <Card className="group hover:shadow-2xl transition-all duration-500 border-0 bg-white/80 backdrop-blur-sm hover:scale-105 hover:bg-white">
+            <CardHeader className="pb-8">
+              <div className="w-16 h-16 bg-gradient-to-br from-indigo-100 to-indigo-200 rounded-2xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-300">
+                <Cloud className="w-8 h-8 text-indigo-600" />
               </div>
-              <CardTitle>Cloud Backup</CardTitle>
-              <CardDescription>
-                Never lose your documents with automatic cloud synchronization
+              <CardTitle className="text-2xl mb-4">Cloud Backup</CardTitle>
+              <CardDescription className="text-lg leading-relaxed">
+                Never lose your documents with automatic cloud synchronization and data recovery
               </CardDescription>
             </CardHeader>
           </Card>
@@ -140,62 +204,86 @@ const Index = () => {
       </section>
 
       {/* CTA Section */}
-      <section className="bg-gradient-to-r from-blue-600 to-purple-600 text-white py-20">
-        <div className="container mx-auto px-4 text-center">
-          <h3 className="text-3xl font-bold mb-4">Ready to Digitize Your License?</h3>
-          <p className="text-xl mb-8 opacity-90">
+      <section className="bg-gradient-to-r from-blue-600 via-purple-600 to-red-600 text-white py-20 lg:py-32 relative overflow-hidden">
+        <div className="absolute inset-0 bg-black/10"></div>
+        <div className="container mx-auto px-4 text-center relative z-10">
+          <h3 className="text-4xl md:text-5xl font-bold mb-6">Ready to Digitize Your License?</h3>
+          <p className="text-xl md:text-2xl mb-12 opacity-90 max-w-2xl mx-auto leading-relaxed">
             Join thousands of Nepali drivers who trust NepLife with their documents
           </p>
-          <Link to="/signup">
-            <Button size="lg" variant="secondary" className="text-lg px-8 py-6">
-              Create Your Account
-            </Button>
-          </Link>
+          <div className="flex flex-col sm:flex-row gap-6 justify-center">
+            <Link to="/signup">
+              <Button size="lg" variant="secondary" className="text-lg px-10 py-7 bg-white text-gray-900 hover:bg-gray-100 shadow-xl hover:shadow-2xl transition-all duration-300 transform hover:scale-105 rounded-xl font-semibold">
+                Create Your Account
+                <ChevronRight className="ml-2 w-5 h-5" />
+              </Button>
+            </Link>
+            <Link to="/demo">
+              <Button size="lg" variant="outline" className="text-lg px-10 py-7 border-2 border-white text-white hover:bg-white hover:text-gray-900 shadow-xl hover:shadow-2xl transition-all duration-300 rounded-xl font-semibold">
+                Watch Demo
+              </Button>
+            </Link>
+          </div>
         </div>
       </section>
 
       {/* Footer */}
-      <footer className="bg-gray-900 text-white py-12">
+      <footer className="bg-gray-900 text-white py-16 lg:py-20">
         <div className="container mx-auto px-4">
-          <div className="grid md:grid-cols-4 gap-8">
+          <div className="grid md:grid-cols-4 gap-12 mb-12">
             <div>
-              <div className="flex items-center gap-3 mb-4">
-                <div className="w-8 h-8 bg-gradient-to-br from-blue-600 to-red-600 rounded-lg flex items-center justify-center">
-                  <Shield className="w-5 h-5 text-white" />
+              <div className="flex items-center gap-3 mb-6">
+                <div className="w-10 h-10 bg-gradient-to-br from-blue-600 to-red-600 rounded-xl flex items-center justify-center shadow-lg">
+                  <Shield className="w-6 h-6 text-white" />
                 </div>
-                <h4 className="text-xl font-bold">NepLife</h4>
+                <h4 className="text-2xl font-bold">NepLife</h4>
               </div>
-              <p className="text-gray-400">
-                The smart way to manage your driving license in Nepal.
+              <p className="text-gray-400 leading-relaxed mb-6">
+                The smart way to manage your driving license in Nepal with cutting-edge technology.
               </p>
+              <div className="flex gap-4">
+                {/* Social media icons placeholder */}
+                <div className="w-10 h-10 bg-gray-800 rounded-lg flex items-center justify-center hover:bg-gray-700 transition-colors cursor-pointer">
+                  <span className="text-sm">f</span>
+                </div>
+                <div className="w-10 h-10 bg-gray-800 rounded-lg flex items-center justify-center hover:bg-gray-700 transition-colors cursor-pointer">
+                  <span className="text-sm">t</span>
+                </div>
+                <div className="w-10 h-10 bg-gray-800 rounded-lg flex items-center justify-center hover:bg-gray-700 transition-colors cursor-pointer">
+                  <span className="text-sm">in</span>
+                </div>
+              </div>
             </div>
             <div>
-              <h5 className="font-semibold mb-4">Product</h5>
-              <ul className="space-y-2 text-gray-400">
-                <li><a href="#" className="hover:text-white transition-colors">Features</a></li>
-                <li><a href="#" className="hover:text-white transition-colors">Pricing</a></li>
+              <h5 className="font-bold text-lg mb-6">Product</h5>
+              <ul className="space-y-4 text-gray-400">
+                <li><a href="#features" className="hover:text-white transition-colors">Features</a></li>
+                <li><a href="#pricing" className="hover:text-white transition-colors">Pricing</a></li>
                 <li><a href="#" className="hover:text-white transition-colors">Demo</a></li>
+                <li><a href="#" className="hover:text-white transition-colors">Security</a></li>
               </ul>
             </div>
             <div>
-              <h5 className="font-semibold mb-4">Support</h5>
-              <ul className="space-y-2 text-gray-400">
+              <h5 className="font-bold text-lg mb-6">Support</h5>
+              <ul className="space-y-4 text-gray-400">
                 <li><a href="#" className="hover:text-white transition-colors">Help Center</a></li>
                 <li><a href="#" className="hover:text-white transition-colors">Contact</a></li>
                 <li><a href="#" className="hover:text-white transition-colors">Privacy</a></li>
+                <li><a href="#" className="hover:text-white transition-colors">Terms</a></li>
               </ul>
             </div>
             <div>
-              <h5 className="font-semibold mb-4">Company</h5>
-              <ul className="space-y-2 text-gray-400">
+              <h5 className="font-bold text-lg mb-6">Company</h5>
+              <ul className="space-y-4 text-gray-400">
                 <li><a href="#" className="hover:text-white transition-colors">About</a></li>
                 <li><a href="#" className="hover:text-white transition-colors">Blog</a></li>
                 <li><a href="#" className="hover:text-white transition-colors">Careers</a></li>
+                <li><a href="#" className="hover:text-white transition-colors">Press</a></li>
               </ul>
             </div>
           </div>
-          <div className="border-t border-gray-800 mt-8 pt-8 text-center text-gray-400">
-            <p>&copy; 2024 NepLife. All rights reserved.</p>
+          <div className="border-t border-gray-800 pt-8 text-center text-gray-400">
+            <p>&copy; 2024 NepLife. All rights reserved. Made with ❤️ for Nepal.</p>
           </div>
         </div>
       </footer>
