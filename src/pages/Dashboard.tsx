@@ -40,6 +40,15 @@ const Dashboard = () => {
     } else {
       setUser(JSON.parse(userData));
     }
+
+    // Load saved licenses from localStorage
+    const savedLicenses = localStorage.getItem('licenses');
+    if (savedLicenses) {
+      const parsedLicenses = JSON.parse(savedLicenses);
+      if (parsedLicenses.length > 0) {
+        setLicenses(parsedLicenses);
+      }
+    }
   }, [navigate]);
 
   const handleLogout = () => {
