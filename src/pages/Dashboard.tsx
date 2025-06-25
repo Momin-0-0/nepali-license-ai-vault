@@ -403,7 +403,6 @@ const Dashboard = () => {
         isOpen={isRemindersOpen}
         onClose={() => setIsRemindersOpen(false)}
         licenses={licenses}
-        onRemindersUpdate={setReminders}
       />
     </div>
   );

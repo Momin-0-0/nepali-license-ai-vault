@@ -122,7 +122,7 @@ export const useOfflineSync = () => {
       if (pending.length > 0) {
         const db = await openDB();
         const transaction = db.transaction(['pendingSync'], 'readwrite');
-        const store = transaction.objectStore(pendingSync);
+        const store = transaction.objectStore('pendingSync');
         await store.clear();
         setPendingSync([]);
       }
