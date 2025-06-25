@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from "@/components/ui/button";
@@ -7,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Shield, Share2, QrCode, Copy, Eye, Clock, Trash2, Plus } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { format, differenceInDays, parseISO } from 'date-fns';
+import QRCodeGenerator from "@/components/QRCodeGenerator";
 
 interface SharedLink {
   id: string;
@@ -22,6 +22,7 @@ interface SharedLink {
 const SharedLinks = () => {
   const [sharedLinks, setSharedLinks] = useState<SharedLink[]>([]);
   const [licenses, setLicenses] = useState<any[]>([]);
+  const [qrCodeModal, setQrCodeModal] = useState({ isOpen: false, shareUrl: '', licenseNumber: '' });
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -94,6 +95,19 @@ const SharedLinks = () => {
     if (days === 0) return { status: 'today', color: 'default', text: 'Expires today' };
     if (days <= 1) return { status: 'soon', color: 'secondary', text: `${days} day left` };
     return { status: 'active', color: 'default', text: `${days} days left` };
+  };
+
+  const showQRCode = (shareToken: string, licenseNumber: string) => {
+    const shareUrl = `${window.location.origin}/shared/${shareToken}`;
+    setQrCodeModal({
+      isOpen: true,
+      shareUrl,
+      licenseNumber
+    });
+  };
+
+  const closeQRCode = () => {
+    setQrCodeModal({ isOpen: false, shareUrl: '', licenseNumber: '' });
   };
 
   return (
@@ -229,6 +243,14 @@ const SharedLinks = () => {
                             <Button 
                               size="sm" 
                               variant="outline"
+                              onClick={() => showQRCode(link.shareToken, link.licenseName)}
+                            >
+                              <QrCode className="w-4 h-4 mr-1" />
+                              QR Code
+                            </Button>
+                            <Button 
+                              size="sm" 
+                              variant="outline"
                               onClick={() => deleteSharedLink(link.id)}
                             >
                               <Trash2 className="w-4 h-4 mr-1" />
@@ -277,6 +299,13 @@ const SharedLinks = () => {
           </Card>
         </div>
       </div>
+
+      <QRCodeGenerator 
+        isOpen={qrCodeModal.isOpen}
+        onClose={closeQRCode}
+        shareUrl={qrCodeModal.shareUrl}
+        licenseNumber={qrCodeModal.licenseNumber}
+      />
     </div>
   );
 };

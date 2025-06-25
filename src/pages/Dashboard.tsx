@@ -6,6 +6,8 @@ import { Shield, Upload, Bell, Share2, FileText, Calendar, User, LogOut, Plus } 
 import { useToast } from "@/hooks/use-toast";
 import { format, differenceInDays, parseISO } from 'date-fns';
 import RemindersModal from "@/components/RemindersModal";
+import NotificationService from "@/components/NotificationService";
+import { useOfflineSync } from "@/hooks/useOfflineSync";
 
 interface License {
   id: string;
@@ -29,9 +31,11 @@ const Dashboard = () => {
       shared: false
     }
   ]);
+  const [reminders, setReminders] = useState<any[]>([]);
   const [isRemindersOpen, setIsRemindersOpen] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { isOnline, saveOfflineData, getOfflineData } = useOfflineSync();
 
   useEffect(() => {
     const userData = localStorage.getItem('user');
@@ -41,15 +45,51 @@ const Dashboard = () => {
       setUser(JSON.parse(userData));
     }
 
-    // Load saved licenses from localStorage
-    const savedLicenses = localStorage.getItem('licenses');
-    if (savedLicenses) {
-      const parsedLicenses = JSON.parse(savedLicenses);
-      if (parsedLicenses.length > 0) {
-        setLicenses(parsedLicenses);
+    // Load saved licenses and reminders
+    const loadData = async () => {
+      try {
+        const savedLicenses = await getOfflineData('licenses');
+        const savedReminders = await getOfflineData('reminders');
+        
+        if (savedLicenses.length > 0) {
+          setLicenses(savedLicenses);
+        }
+        if (savedReminders.length > 0) {
+          setReminders(savedReminders);
+        }
+      } catch (error) {
+        console.error('Error loading offline data:', error);
+        // Fallback to localStorage
+        const savedLicenses = localStorage.getItem('licenses');
+        const savedReminders = localStorage.getItem('reminders');
+        
+        if (savedLicenses) {
+          const parsedLicenses = JSON.parse(savedLicenses);
+          if (parsedLicenses.length > 0) {
+            setLicenses(parsedLicenses);
+          }
+        }
+        if (savedReminders) {
+          setReminders(JSON.parse(savedReminders));
+        }
       }
+    };
+
+    loadData();
+  }, [navigate, getOfflineData]);
+
+  // Save data offline when it changes
+  useEffect(() => {
+    if (licenses.length > 0) {
+      saveOfflineData('licenses', licenses);
     }
-  }, [navigate]);
+  }, [licenses, saveOfflineData]);
+
+  useEffect(() => {
+    if (reminders.length > 0) {
+      saveOfflineData('reminders', reminders);
+    }
+  }, [reminders, saveOfflineData]);
 
   const handleLogout = () => {
     localStorage.removeItem('user');
@@ -113,6 +153,11 @@ const Dashboard = () => {
             <h1 className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-red-600 bg-clip-text text-transparent">
               NepLife
             </h1>
+            {!isOnline && (
+              <span className="bg-orange-100 text-orange-800 text-xs px-2 py-1 rounded-full">
+                Offline
+              </span>
+            )}
           </div>
           <div className="flex items-center gap-4">
             <Button variant="ghost" onClick={() => navigate('/profile')}>
@@ -137,6 +182,9 @@ const Dashboard = () => {
             Manage your driving licenses and stay on top of renewals
           </p>
         </div>
+
+        {/* Notification Service */}
+        <NotificationService licenses={licenses} reminders={reminders} />
 
         {/* Quick Actions */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
@@ -355,6 +403,7 @@ const Dashboard = () => {
         isOpen={isRemindersOpen}
         onClose={() => setIsRemindersOpen(false)}
         licenses={licenses}
+        onRemindersUpdate={setReminders}
       />
     </div>
   );
