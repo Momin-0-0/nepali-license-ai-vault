@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -33,9 +33,50 @@ const Dashboard = () => {
   ]);
   const [reminders, setReminders] = useState<any[]>([]);
   const [isRemindersOpen, setIsRemindersOpen] = useState(false);
+  const [dataLoaded, setDataLoaded] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
   const { isOnline, saveOfflineData, getOfflineData } = useOfflineSync();
+
+  // Memoize the data loading function to prevent recreating it on every render
+  const loadData = useCallback(async () => {
+    if (dataLoaded) return;
+    
+    try {
+      console.log('Loading offline data...');
+      const savedLicenses = await getOfflineData('licenses');
+      const savedReminders = await getOfflineData('reminders');
+      
+      console.log('Loaded licenses:', savedLicenses);
+      console.log('Loaded reminders:', savedReminders);
+      
+      if (savedLicenses && savedLicenses.length > 0) {
+        setLicenses(savedLicenses);
+      }
+      if (savedReminders && savedReminders.length > 0) {
+        setReminders(savedReminders);
+      }
+      
+      setDataLoaded(true);
+    } catch (error) {
+      console.error('Error loading offline data:', error);
+      // Fallback to localStorage
+      const savedLicenses = localStorage.getItem('licenses');
+      const savedReminders = localStorage.getItem('reminders');
+      
+      if (savedLicenses) {
+        const parsedLicenses = JSON.parse(savedLicenses);
+        if (parsedLicenses.length > 0) {
+          setLicenses(parsedLicenses);
+        }
+      }
+      if (savedReminders) {
+        setReminders(JSON.parse(savedReminders));
+      }
+      
+      setDataLoaded(true);
+    }
+  }, [getOfflineData, dataLoaded]);
 
   useEffect(() => {
     const userData = localStorage.getItem('user');
@@ -46,50 +87,23 @@ const Dashboard = () => {
     }
 
     // Load saved licenses and reminders
-    const loadData = async () => {
-      try {
-        const savedLicenses = await getOfflineData('licenses');
-        const savedReminders = await getOfflineData('reminders');
-        
-        if (savedLicenses.length > 0) {
-          setLicenses(savedLicenses);
-        }
-        if (savedReminders.length > 0) {
-          setReminders(savedReminders);
-        }
-      } catch (error) {
-        console.error('Error loading offline data:', error);
-        // Fallback to localStorage
-        const savedLicenses = localStorage.getItem('licenses');
-        const savedReminders = localStorage.getItem('reminders');
-        
-        if (savedLicenses) {
-          const parsedLicenses = JSON.parse(savedLicenses);
-          if (parsedLicenses.length > 0) {
-            setLicenses(parsedLicenses);
-          }
-        }
-        if (savedReminders) {
-          setReminders(JSON.parse(savedReminders));
-        }
-      }
-    };
-
     loadData();
-  }, [navigate, getOfflineData]);
+  }, [navigate, loadData]);
 
-  // Save data offline when it changes
+  // Save data offline when it changes - but only after initial load
   useEffect(() => {
-    if (licenses.length > 0) {
-      saveOfflineData('licenses', licenses);
+    if (dataLoaded && licenses.length > 0) {
+      console.log('Saving licenses to offline storage...');
+      saveOfflineData('licenses', licenses).catch(console.error);
     }
-  }, [licenses, saveOfflineData]);
+  }, [licenses, saveOfflineData, dataLoaded]);
 
   useEffect(() => {
-    if (reminders.length > 0) {
-      saveOfflineData('reminders', reminders);
+    if (dataLoaded && reminders.length > 0) {
+      console.log('Saving reminders to offline storage...');
+      saveOfflineData('reminders', reminders).catch(console.error);
     }
-  }, [reminders, saveOfflineData]);
+  }, [reminders, saveOfflineData, dataLoaded]);
 
   const handleLogout = () => {
     localStorage.removeItem('user');

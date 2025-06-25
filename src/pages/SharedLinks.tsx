@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from "@/components/ui/button";
@@ -31,17 +32,39 @@ const SharedLinks = () => {
     const savedLinks = localStorage.getItem('sharedLinks');
     const savedLicenses = localStorage.getItem('licenses');
     
+    console.log('Loading shared links:', savedLinks);
+    console.log('Loading licenses:', savedLicenses);
+    
     if (savedLinks) {
-      setSharedLinks(JSON.parse(savedLinks));
+      try {
+        const parsedLinks = JSON.parse(savedLinks);
+        setSharedLinks(parsedLinks);
+      } catch (error) {
+        console.error('Error parsing shared links:', error);
+        setSharedLinks([]);
+      }
     }
     if (savedLicenses) {
-      setLicenses(JSON.parse(savedLicenses));
+      try {
+        const parsedLicenses = JSON.parse(savedLicenses);
+        setLicenses(parsedLicenses);
+      } catch (error) {
+        console.error('Error parsing licenses:', error);
+        setLicenses([]);
+      }
     }
   }, []);
 
   const generateShareLink = (licenseId: string, expiryHours: number = 24, maxAccess?: number) => {
     const license = licenses.find(l => l.id === licenseId);
-    if (!license) return;
+    if (!license) {
+      toast({
+        title: "Error",
+        description: "License not found",
+        variant: "destructive"
+      });
+      return;
+    }
 
     const shareToken = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
     const expiresAt = new Date(Date.now() + expiryHours * 60 * 60 * 1000).toISOString();
@@ -49,7 +72,7 @@ const SharedLinks = () => {
     const newSharedLink: SharedLink = {
       id: Date.now().toString(),
       licenseId,
-      licenseName: license.licenseNumber,
+      licenseName: license.licenseNumber || 'Unknown License',
       shareToken,
       expiresAt,
       accessCount: 0,
@@ -71,10 +94,17 @@ const SharedLinks = () => {
 
   const copyShareLink = (shareToken: string) => {
     const shareUrl = `${window.location.origin}/shared/${shareToken}`;
-    navigator.clipboard.writeText(shareUrl);
-    toast({
-      title: "Link Copied",
-      description: "Share link has been copied to clipboard.",
+    navigator.clipboard.writeText(shareUrl).then(() => {
+      toast({
+        title: "Link Copied",
+        description: "Share link has been copied to clipboard.",
+      });
+    }).catch(() => {
+      toast({
+        title: "Error",
+        description: "Failed to copy link to clipboard.",
+        variant: "destructive"
+      });
     });
   };
 
@@ -90,11 +120,20 @@ const SharedLinks = () => {
   };
 
   const getExpiryStatus = (expiresAt: string) => {
-    const days = differenceInDays(parseISO(expiresAt), new Date());
-    if (days < 0) return { status: 'expired', color: 'destructive', text: 'Expired' };
-    if (days === 0) return { status: 'today', color: 'default', text: 'Expires today' };
-    if (days <= 1) return { status: 'soon', color: 'secondary', text: `${days} day left` };
-    return { status: 'active', color: 'default', text: `${days} days left` };
+    if (!expiresAt) {
+      return { status: 'unknown', color: 'destructive', text: 'Invalid Date' };
+    }
+    
+    try {
+      const days = differenceInDays(parseISO(expiresAt), new Date());
+      if (days < 0) return { status: 'expired', color: 'destructive', text: 'Expired' };
+      if (days === 0) return { status: 'today', color: 'default', text: 'Expires today' };
+      if (days <= 1) return { status: 'soon', color: 'secondary', text: `${days} day left` };
+      return { status: 'active', color: 'default', text: `${days} days left` };
+    } catch (error) {
+      console.error('Error parsing date:', expiresAt, error);
+      return { status: 'unknown', color: 'destructive', text: 'Invalid Date' };
+    }
   };
 
   const showQRCode = (shareToken: string, licenseNumber: string) => {
@@ -108,6 +147,16 @@ const SharedLinks = () => {
 
   const closeQRCode = () => {
     setQrCodeModal({ isOpen: false, shareUrl: '', licenseNumber: '' });
+  };
+
+  const formatDate = (dateString: string) => {
+    if (!dateString) return 'N/A';
+    try {
+      return format(parseISO(dateString), 'MMM dd, yyyy');
+    } catch (error) {
+      console.error('Error formatting date:', dateString, error);
+      return 'Invalid Date';
+    }
   };
 
   return (
@@ -148,7 +197,7 @@ const SharedLinks = () => {
                   <div key={license.id} className="border rounded-lg p-4">
                     <h3 className="font-semibold">{license.licenseNumber}</h3>
                     <p className="text-sm text-gray-600 mb-3">
-                      Expires: {format(parseISO(license.expiryDate), 'MMM dd, yyyy')}
+                      Expires: {formatDate(license.expiryDate)}
                     </p>
                     <div className="space-y-2">
                       <Button 
@@ -209,7 +258,7 @@ const SharedLinks = () => {
                           <div>
                             <h3 className="font-semibold">{link.licenseName}</h3>
                             <p className="text-sm text-gray-600">
-                              Created: {format(parseISO(link.createdAt), 'MMM dd, yyyy')}
+                              Created: {formatDate(link.createdAt)}
                             </p>
                           </div>
                           <Badge variant={color as any}>{text}</Badge>
@@ -223,7 +272,7 @@ const SharedLinks = () => {
                           <div className="flex items-center gap-4 text-sm text-gray-600">
                             <span className="flex items-center gap-1">
                               <Eye className="w-4 h-4" />
-                              {link.accessCount} views
+                              {link.accessCount || 0} views
                             </span>
                             <span className="flex items-center gap-1">
                               <Clock className="w-4 h-4" />
