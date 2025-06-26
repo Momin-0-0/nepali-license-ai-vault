@@ -1,4 +1,3 @@
-
 import { useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from "@/components/ui/button";
@@ -8,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Shield, Upload as UploadIcon, Camera, FileText, Loader2, Check, AlertCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { createWorker } from 'tesseract.js';
+import { createWorker, PSM } from 'tesseract.js';
 
 interface LicenseData {
   licenseNumber: string;
@@ -202,10 +201,10 @@ const Upload = () => {
       
       setProcessingStep('Analyzing license image...');
       
-      // Configure Tesseract for better accuracy - fix the PSM type
+      // Configure Tesseract for better accuracy using PSM enum
       await worker.setParameters({
         tessedit_char_whitelist: 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-.,: /',
-        tessedit_pageseg_mode: 6, // Changed from '6' to 6 (number instead of string)
+        tessedit_pageseg_mode: PSM.SINGLE_UNIFORM_BLOCK,
       });
 
       const { data: { text } } = await worker.recognize(selectedFile);
