@@ -1,3 +1,4 @@
+
 import { useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from "@/components/ui/button";
@@ -191,7 +192,6 @@ const Upload = () => {
     setProcessingStep('Initializing OCR...');
 
     try {
-      // Use both English and Nepali for better recognition
       const worker = await createWorker(['eng', 'nep'], 1, {
         logger: m => {
           if (m.status === 'recognizing text') {
@@ -202,10 +202,10 @@ const Upload = () => {
       
       setProcessingStep('Analyzing license image...');
       
-      // Configure Tesseract for better accuracy
+      // Configure Tesseract for better accuracy - fix the PSM type
       await worker.setParameters({
         tessedit_char_whitelist: 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-.,: /',
-        tessedit_pageseg_mode: '6', // Uniform block of text
+        tessedit_pageseg_mode: 6, // Changed from '6' to 6 (number instead of string)
       });
 
       const { data: { text } } = await worker.recognize(selectedFile);
