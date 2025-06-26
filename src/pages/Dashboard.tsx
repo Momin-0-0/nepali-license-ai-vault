@@ -2,11 +2,12 @@ import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Shield, Upload, Bell, Share2, FileText, Calendar, User, LogOut, Plus } from "lucide-react";
+import { Shield, Upload, Bell, Share2, FileText, Calendar, User, LogOut, Plus, Image } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { format, differenceInDays, parseISO } from 'date-fns';
 import RemindersModal from "@/components/RemindersModal";
 import NotificationService from "@/components/NotificationService";
+import LicenseImageModal from "@/components/LicenseImageModal";
 import { useOfflineSync } from "@/hooks/useOfflineSync";
 
 interface License {
@@ -33,6 +34,7 @@ const Dashboard = () => {
   ]);
   const [reminders, setReminders] = useState<any[]>([]);
   const [isRemindersOpen, setIsRemindersOpen] = useState(false);
+  const [selectedImageLicense, setSelectedImageLicense] = useState<License | null>(null);
   const [dataLoaded, setDataLoaded] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -307,49 +309,84 @@ const Dashboard = () => {
                       const { status, color, bg } = getExpiryStatus(license.expiryDate);
                       return (
                         <div key={license.id} className="border rounded-lg p-4 hover:shadow-md transition-shadow">
-                          <div className="flex justify-between items-start mb-3">
-                            <div>
-                              <h3 className="font-semibold text-lg">{license.licenseNumber}</h3>
-                              <p className="text-sm text-gray-600">{license.issuingAuthority}</p>
+                          <div className="flex gap-4">
+                            {/* License Image */}
+                            <div className="flex-shrink-0">
+                              {license.image ? (
+                                <div 
+                                  className="w-24 h-16 bg-gray-100 rounded-lg overflow-hidden cursor-pointer hover:opacity-80 transition-opacity"
+                                  onClick={() => setSelectedImageLicense(license)}
+                                >
+                                  <img
+                                    src={license.image}
+                                    alt={`License ${license.licenseNumber}`}
+                                    className="w-full h-full object-cover"
+                                  />
+                                </div>
+                              ) : (
+                                <div className="w-24 h-16 bg-gray-100 rounded-lg flex items-center justify-center">
+                                  <Image className="w-8 h-8 text-gray-400" />
+                                </div>
+                              )}
                             </div>
-                            <div className={`px-3 py-1 rounded-full text-xs font-medium ${bg} ${color}`}>
-                              {status === 'expired' ? 'Expired' : 
-                               status === 'critical' ? 'Expires Soon' :
-                               status === 'warning' ? 'Expires This Month' : 'Valid'}
+
+                            {/* License Details */}
+                            <div className="flex-1">
+                              <div className="flex justify-between items-start mb-3">
+                                <div>
+                                  <h3 className="font-semibold text-lg">{license.licenseNumber}</h3>
+                                  <p className="text-sm text-gray-600">{license.issuingAuthority}</p>
+                                </div>
+                                <div className={`px-3 py-1 rounded-full text-xs font-medium ${bg} ${color}`}>
+                                  {status === 'expired' ? 'Expired' : 
+                                   status === 'critical' ? 'Expires Soon' :
+                                   status === 'warning' ? 'Expires This Month' : 'Valid'}
+                                </div>
+                              </div>
+                              <div className="grid grid-cols-2 gap-4 text-sm mb-3">
+                                <div>
+                                  <p className="text-gray-500">Issue Date</p>
+                                  <p className="font-medium">{format(parseISO(license.issueDate), 'MMM dd, yyyy')}</p>
+                                </div>
+                                <div>
+                                  <p className="text-gray-500">Expiry Date</p>
+                                  <p className="font-medium">{format(parseISO(license.expiryDate), 'MMM dd, yyyy')}</p>
+                                </div>
+                              </div>
+                              <div className="flex gap-2">
+                                <Button 
+                                  size="sm" 
+                                  variant="outline"
+                                  onClick={() => handleEditLicense(license.id)}
+                                >
+                                  Edit
+                                </Button>
+                                <Button 
+                                  size="sm" 
+                                  variant="outline"
+                                  onClick={() => handleShareLicense(license.id)}
+                                >
+                                  Share
+                                </Button>
+                                <Button 
+                                  size="sm" 
+                                  variant="outline"
+                                  onClick={() => handleDownloadLicense(license.id)}
+                                >
+                                  Download
+                                </Button>
+                                {license.image && (
+                                  <Button 
+                                    size="sm" 
+                                    variant="outline"
+                                    onClick={() => setSelectedImageLicense(license)}
+                                  >
+                                    <Image className="w-4 h-4 mr-1" />
+                                    View
+                                  </Button>
+                                )}
+                              </div>
                             </div>
-                          </div>
-                          <div className="grid grid-cols-2 gap-4 text-sm mb-3">
-                            <div>
-                              <p className="text-gray-500">Issue Date</p>
-                              <p className="font-medium">{format(parseISO(license.issueDate), 'MMM dd, yyyy')}</p>
-                            </div>
-                            <div>
-                              <p className="text-gray-500">Expiry Date</p>
-                              <p className="font-medium">{format(parseISO(license.expiryDate), 'MMM dd, yyyy')}</p>
-                            </div>
-                          </div>
-                          <div className="flex gap-2">
-                            <Button 
-                              size="sm" 
-                              variant="outline"
-                              onClick={() => handleEditLicense(license.id)}
-                            >
-                              Edit
-                            </Button>
-                            <Button 
-                              size="sm" 
-                              variant="outline"
-                              onClick={() => handleShareLicense(license.id)}
-                            >
-                              Share
-                            </Button>
-                            <Button 
-                              size="sm" 
-                              variant="outline"
-                              onClick={() => handleDownloadLicense(license.id)}
-                            >
-                              Download
-                            </Button>
                           </div>
                         </div>
                       );
@@ -418,6 +455,15 @@ const Dashboard = () => {
         onClose={() => setIsRemindersOpen(false)}
         licenses={licenses}
       />
+
+      {selectedImageLicense?.image && (
+        <LicenseImageModal
+          isOpen={!!selectedImageLicense}
+          onClose={() => setSelectedImageLicense(null)}
+          imageUrl={selectedImageLicense.image}
+          licenseNumber={selectedImageLicense.licenseNumber}
+        />
+      )}
     </div>
   );
 };
