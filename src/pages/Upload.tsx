@@ -1,4 +1,3 @@
-
 import { useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from "@/components/ui/button";
@@ -202,10 +201,10 @@ const Upload = () => {
       
       setProcessingStep('Analyzing license image...');
       
-      // Configure Tesseract for better accuracy - use numeric value instead
+      // Configure Tesseract for better accuracy - use PSM.SINGLE_BLOCK directly
       await worker.setParameters({
         tessedit_char_whitelist: 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-.,: /',
-        tessedit_pageseg_mode: PSM.SINGLE_BLOCK || 6,
+        tessedit_pageseg_mode: PSM.SINGLE_BLOCK,
       });
 
       const { data: { text } } = await worker.recognize(selectedFile);
