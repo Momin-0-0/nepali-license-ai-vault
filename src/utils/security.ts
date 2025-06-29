@@ -23,13 +23,17 @@ export const encryptSensitiveData = (data: any): string => {
 };
 
 export const decryptSensitiveData = (encryptedData: string): any => {
+  // First try to decode as base64 (encrypted data)
   try {
-    return JSON.parse(atob(encryptedData));
-  } catch (error) {
-    console.error('Decryption failed:', error);
+    const decoded = atob(encryptedData);
+    return JSON.parse(decoded);
+  } catch (base64Error) {
+    // If base64 decoding fails, try parsing as plain JSON (unencrypted data)
     try {
       return JSON.parse(encryptedData);
-    } catch {
+    } catch (jsonError) {
+      // If both fail, return null
+      console.error('Failed to decrypt/parse data:', jsonError);
       return null;
     }
   }
