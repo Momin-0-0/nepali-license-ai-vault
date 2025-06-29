@@ -157,7 +157,7 @@ const Index = () => {
                 <ChevronRight className="ml-2 w-5 h-5" />
               </Button>
             </Link>
-            <Link to="/demo">
+            <Link to="/loading-demo">
               <Button variant="outline" size="lg" className="text-lg px-10 py-7 border-2 hover:bg-gray-50 shadow-lg hover:shadow-xl transition-all duration-300 rounded-xl font-semibold">
                 Watch Demo
               </Button>
@@ -433,7 +433,7 @@ const Index = () => {
                 <ChevronRight className="ml-2 w-5 h-5" />
               </Button>
             </Link>
-            <Link to="/demo">
+            <Link to="/loading-demo">
               <Button size="lg" variant="outline" className="text-lg px-10 py-7 border-2 border-white text-white hover:bg-white hover:text-gray-900 shadow-xl hover:shadow-2xl transition-all duration-300 rounded-xl font-semibold">
                 Watch Demo
               </Button>
@@ -478,7 +478,7 @@ const Index = () => {
               <ul className="space-y-4 text-gray-400">
                 <li><button onClick={() => scrollToSection('features')} className="hover:text-white transition-colors">Features</button></li>
                 <li><button onClick={() => scrollToSection('pricing')} className="hover:text-white transition-colors">Pricing</button></li>
-                <li><a href="#" className="hover:text-white transition-colors">Demo</a></li>
+                <li><Link to="/loading-demo" className="hover:text-white transition-colors">Demo</Link></li>
                 <li><a href="#" className="hover:text-white transition-colors">Security</a></li>
               </ul>
             </div>
