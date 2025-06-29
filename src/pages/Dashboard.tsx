@@ -8,6 +8,10 @@ import { format, differenceInDays, parseISO } from 'date-fns';
 import RemindersModal from "@/components/RemindersModal";
 import NotificationService from "@/components/NotificationService";
 import LicenseImageModal from "@/components/LicenseImageModal";
+import AppHeader from "@/components/AppHeader";
+import QuickActionCard from "@/components/QuickActionCard";
+import LicenseCard from "@/components/LicenseCard";
+import EmptyState from "@/components/EmptyState";
 import { useOfflineSync } from "@/hooks/useOfflineSync";
 
 interface License {
@@ -159,40 +163,17 @@ const Dashboard = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-red-50">
-      {/* Header */}
-      <header className="border-b bg-white/80 backdrop-blur-sm sticky top-0 z-50">
-        <div className="container mx-auto px-4 py-4 flex justify-between items-center">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-gradient-to-br from-blue-600 to-red-600 rounded-lg flex items-center justify-center">
-              <Shield className="w-6 h-6 text-white" />
-            </div>
-            <h1 className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-red-600 bg-clip-text text-transparent">
-              NepLife
-            </h1>
-            {!isOnline && (
-              <span className="bg-orange-100 text-orange-800 text-xs px-2 py-1 rounded-full">
-                Offline
-              </span>
-            )}
-          </div>
-          <div className="flex items-center gap-4">
-            <Button variant="ghost" onClick={() => navigate('/profile')}>
-              <User className="w-5 h-5 text-gray-600 mr-2" />
-              <span className="text-gray-700">{user.name}</span>
-            </Button>
-            <Button variant="outline" onClick={handleLogout}>
-              <LogOut className="w-4 h-4 mr-2" />
-              Logout
-            </Button>
-          </div>
-        </div>
-      </header>
+      <AppHeader 
+        user={user} 
+        isOnline={isOnline} 
+        notificationCount={expiringLicenses.length}
+      />
 
       <div className="container mx-auto px-4 py-8">
         {/* Welcome Section */}
         <div className="mb-8">
           <h2 className="text-3xl font-bold text-gray-900 mb-2">
-            Welcome back, {user.name}!
+            Welcome back, {user?.name}!
           </h2>
           <p className="text-gray-600">
             Manage your driving licenses and stay on top of renewals
@@ -203,38 +184,32 @@ const Dashboard = () => {
         <NotificationService licenses={licenses} reminders={reminders} />
 
         {/* Quick Actions */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
-          <Button 
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+          <QuickActionCard
+            title="Upload License"
+            description="Add a new license"
+            icon={Upload}
             onClick={() => navigate('/upload')}
-            className="h-24 flex flex-col items-center justify-center gap-2 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700"
-          >
-            <Upload className="w-6 h-6" />
-            Upload License
-          </Button>
-          <Button 
-            variant="outline" 
-            className="h-24 flex flex-col items-center justify-center gap-2"
+            variant="primary"
+          />
+          <QuickActionCard
+            title="Reminders"
+            description="Manage notifications"
+            icon={Bell}
             onClick={() => setIsRemindersOpen(true)}
-          >
-            <Bell className="w-6 h-6" />
-            Reminders
-          </Button>
-          <Button 
-            variant="outline" 
-            className="h-24 flex flex-col items-center justify-center gap-2"
+          />
+          <QuickActionCard
+            title="Shared Links"
+            description="View shared licenses"
+            icon={Share2}
             onClick={() => navigate('/shared-links')}
-          >
-            <Share2 className="w-6 h-6" />
-            Shared Links
-          </Button>
-          <Button 
-            variant="outline" 
-            className="h-24 flex flex-col items-center justify-center gap-2"
+          />
+          <QuickActionCard
+            title="All Licenses"
+            description="Browse all licenses"
+            icon={FileText}
             onClick={() => navigate('/all-licenses')}
-          >
-            <FileText className="w-6 h-6" />
-            All Licenses
-          </Button>
+          />
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -254,13 +229,12 @@ const Dashboard = () => {
                 </CardHeader>
                 <CardContent>
                   {expiringLicenses.map(license => {
-                    const { status, color } = getExpiryStatus(license.expiryDate);
                     const daysLeft = differenceInDays(parseISO(license.expiryDate), new Date());
                     return (
                       <div key={license.id} className="flex justify-between items-center p-3 bg-white rounded-lg mb-2 last:mb-0">
                         <div>
                           <p className="font-medium">{license.licenseNumber}</p>
-                          <p className={`text-sm ${color}`}>
+                          <p className="text-sm text-orange-600">
                             Expires in {daysLeft} day{daysLeft !== 1 ? 's' : ''}
                           </p>
                         </div>
@@ -296,101 +270,25 @@ const Dashboard = () => {
               </CardHeader>
               <CardContent>
                 {licenses.length === 0 ? (
-                  <div className="text-center py-8">
-                    <FileText className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-                    <p className="text-gray-500 mb-4">No licenses uploaded yet</p>
-                    <Button onClick={() => navigate('/upload')}>
-                      Upload Your First License
-                    </Button>
-                  </div>
+                  <EmptyState
+                    icon={FileText}
+                    title="No licenses uploaded yet"
+                    description="Upload your first driving license to get started with managing your documents."
+                    actionLabel="Upload Your First License"
+                    onAction={() => navigate('/upload')}
+                  />
                 ) : (
                   <div className="space-y-4">
-                    {licenses.map(license => {
-                      const { status, color, bg } = getExpiryStatus(license.expiryDate);
-                      return (
-                        <div key={license.id} className="border rounded-lg p-4 hover:shadow-md transition-shadow">
-                          <div className="flex gap-4">
-                            {/* License Image */}
-                            <div className="flex-shrink-0">
-                              {license.image ? (
-                                <div 
-                                  className="w-24 h-16 bg-gray-100 rounded-lg overflow-hidden cursor-pointer hover:opacity-80 transition-opacity"
-                                  onClick={() => setSelectedImageLicense(license)}
-                                >
-                                  <img
-                                    src={license.image}
-                                    alt={`License ${license.licenseNumber}`}
-                                    className="w-full h-full object-cover"
-                                  />
-                                </div>
-                              ) : (
-                                <div className="w-24 h-16 bg-gray-100 rounded-lg flex items-center justify-center">
-                                  <Image className="w-8 h-8 text-gray-400" />
-                                </div>
-                              )}
-                            </div>
-
-                            {/* License Details */}
-                            <div className="flex-1">
-                              <div className="flex justify-between items-start mb-3">
-                                <div>
-                                  <h3 className="font-semibold text-lg">{license.licenseNumber}</h3>
-                                  <p className="text-sm text-gray-600">{license.issuingAuthority}</p>
-                                </div>
-                                <div className={`px-3 py-1 rounded-full text-xs font-medium ${bg} ${color}`}>
-                                  {status === 'expired' ? 'Expired' : 
-                                   status === 'critical' ? 'Expires Soon' :
-                                   status === 'warning' ? 'Expires This Month' : 'Valid'}
-                                </div>
-                              </div>
-                              <div className="grid grid-cols-2 gap-4 text-sm mb-3">
-                                <div>
-                                  <p className="text-gray-500">Issue Date</p>
-                                  <p className="font-medium">{format(parseISO(license.issueDate), 'MMM dd, yyyy')}</p>
-                                </div>
-                                <div>
-                                  <p className="text-gray-500">Expiry Date</p>
-                                  <p className="font-medium">{format(parseISO(license.expiryDate), 'MMM dd, yyyy')}</p>
-                                </div>
-                              </div>
-                              <div className="flex gap-2">
-                                <Button 
-                                  size="sm" 
-                                  variant="outline"
-                                  onClick={() => handleEditLicense(license.id)}
-                                >
-                                  Edit
-                                </Button>
-                                <Button 
-                                  size="sm" 
-                                  variant="outline"
-                                  onClick={() => handleShareLicense(license.id)}
-                                >
-                                  Share
-                                </Button>
-                                <Button 
-                                  size="sm" 
-                                  variant="outline"
-                                  onClick={() => handleDownloadLicense(license.id)}
-                                >
-                                  Download
-                                </Button>
-                                {license.image && (
-                                  <Button 
-                                    size="sm" 
-                                    variant="outline"
-                                    onClick={() => setSelectedImageLicense(license)}
-                                  >
-                                    <Image className="w-4 h-4 mr-1" />
-                                    View
-                                  </Button>
-                                )}
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                      );
-                    })}
+                    {licenses.map(license => (
+                      <LicenseCard
+                        key={license.id}
+                        license={license}
+                        onEdit={handleEditLicense}
+                        onShare={handleShareLicense}
+                        onDownload={handleDownloadLicense}
+                        onViewImage={setSelectedImageLicense}
+                      />
+                    ))}
                   </div>
                 )}
               </CardContent>
@@ -405,23 +303,23 @@ const Dashboard = () => {
                 <CardTitle>Quick Stats</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div className="flex justify-between">
+                <div className="flex justify-between items-center">
                   <span className="text-gray-600">Total Licenses</span>
-                  <span className="font-semibold">{licenses.length}</span>
+                  <span className="font-semibold text-2xl">{licenses.length}</span>
                 </div>
-                <div className="flex justify-between">
+                <div className="flex justify-between items-center">
                   <span className="text-gray-600">Active Licenses</span>
-                  <span className="font-semibold text-green-600">
+                  <span className="font-semibold text-2xl text-green-600">
                     {licenses.filter(l => differenceInDays(parseISO(l.expiryDate), new Date()) > 0).length}
                   </span>
                 </div>
-                <div className="flex justify-between">
+                <div className="flex justify-between items-center">
                   <span className="text-gray-600">Expiring Soon</span>
-                  <span className="font-semibold text-orange-600">{expiringLicenses.length}</span>
+                  <span className="font-semibold text-2xl text-orange-600">{expiringLicenses.length}</span>
                 </div>
-                <div className="flex justify-between">
+                <div className="flex justify-between items-center">
                   <span className="text-gray-600">Shared Links</span>
-                  <span className="font-semibold">{licenses.filter(l => l.shared).length}</span>
+                  <span className="font-semibold text-2xl text-blue-600">{licenses.filter(l => l.shared).length}</span>
                 </div>
               </CardContent>
             </Card>
@@ -433,15 +331,15 @@ const Dashboard = () => {
               </CardHeader>
               <CardContent>
                 <div className="space-y-3 text-sm">
-                  <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-3 p-2 rounded-lg hover:bg-gray-50">
                     <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-                    <span className="text-gray-600">License uploaded</span>
-                    <span className="text-gray-400 ml-auto">2h ago</span>
+                    <span className="text-gray-600 flex-1">License uploaded</span>
+                    <span className="text-gray-400">2h ago</span>
                   </div>
-                  <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-3 p-2 rounded-lg hover:bg-gray-50">
                     <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                    <span className="text-gray-600">Account created</span>
-                    <span className="text-gray-400 ml-auto">1d ago</span>
+                    <span className="text-gray-600 flex-1">Account created</span>
+                    <span className="text-gray-400">1d ago</span>
                   </div>
                 </div>
               </CardContent>

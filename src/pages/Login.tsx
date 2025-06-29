@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Shield, Eye, EyeOff } from "lucide-react";
+import { Shield, Eye, EyeOff, Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 const Login = () => {
@@ -20,73 +20,97 @@ const Login = () => {
     e.preventDefault();
     setIsLoading(true);
 
-    // Simulate API call
-    setTimeout(() => {
-      if (email && password) {
-        localStorage.setItem('user', JSON.stringify({ email, name: 'Demo User' }));
-        toast({
-          title: "Login Successful",
-          description: "Welcome back to NepLife!",
-        });
-        navigate('/dashboard');
-      } else {
-        toast({
-          title: "Login Failed",
-          description: "Please fill in all fields",
-          variant: "destructive",
-        });
-      }
+    // Enhanced validation
+    if (!email || !password) {
+      toast({
+        title: "Missing Information",
+        description: "Please fill in all required fields",
+        variant: "destructive",
+      });
       setIsLoading(false);
-    }, 1000);
+      return;
+    }
+
+    // Basic email validation
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      toast({
+        title: "Invalid Email",
+        description: "Please enter a valid email address",
+        variant: "destructive",
+      });
+      setIsLoading(false);
+      return;
+    }
+
+    // Simulate API call with realistic delay
+    setTimeout(() => {
+      localStorage.setItem('user', JSON.stringify({ 
+        email, 
+        name: email.split('@')[0].charAt(0).toUpperCase() + email.split('@')[0].slice(1),
+        avatar: null
+      }));
+      
+      toast({
+        title: "Welcome back!",
+        description: "You have been successfully logged in.",
+      });
+      
+      navigate('/dashboard');
+      setIsLoading(false);
+    }, 1500);
   };
 
   const handleGoogleLogin = () => {
     toast({
-      title: "Google Login",
-      description: "Google OAuth integration will be implemented with backend",
+      title: "Coming Soon",
+      description: "Google OAuth integration will be available soon",
     });
   };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-red-50 flex items-center justify-center p-4">
       <div className="w-full max-w-md">
-        {/* Header */}
+        {/* Enhanced Header */}
         <div className="text-center mb-8">
-          <Link to="/" className="flex items-center justify-center gap-3 mb-4">
-            <div className="w-12 h-12 bg-gradient-to-br from-blue-600 to-red-600 rounded-lg flex items-center justify-center">
+          <Link to="/" className="flex items-center justify-center gap-3 mb-6 group">
+            <div className="w-12 h-12 bg-gradient-to-br from-blue-600 to-red-600 rounded-xl flex items-center justify-center shadow-lg group-hover:shadow-xl transition-shadow">
               <Shield className="w-7 h-7 text-white" />
             </div>
             <h1 className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-red-600 bg-clip-text text-transparent">
               NepLife
             </h1>
           </Link>
-          <h2 className="text-2xl font-semibold text-gray-900">Welcome back</h2>
-          <p className="text-gray-600 mt-2">Sign in to your account</p>
+          <h2 className="text-2xl font-semibold text-gray-900 mb-2">Welcome back</h2>
+          <p className="text-gray-600">Sign in to access your license vault</p>
         </div>
 
-        <Card className="shadow-lg">
-          <CardHeader>
-            <CardTitle>Sign In</CardTitle>
+        {/* Enhanced Card */}
+        <Card className="shadow-xl border-0 bg-white/90 backdrop-blur">
+          <CardHeader className="space-y-1 pb-4">
+            <CardTitle className="text-xl">Sign In</CardTitle>
             <CardDescription>
-              Enter your email and password to access your account
+              Enter your credentials to access your account
             </CardDescription>
           </CardHeader>
           <CardContent>
             <form onSubmit={handleLogin} className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="email">Email</Label>
+                <Label htmlFor="email" className="text-sm font-medium">Email Address</Label>
                 <Input
                   id="email"
                   type="email"
-                  placeholder="your@email.com"
+                  placeholder="Enter your email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   required
+                  className="h-11"
+                  disabled={isLoading}
                 />
               </div>
               
               <div className="space-y-2">
-                <Label htmlFor="password">Password</Label>
+                <Label htmlFor="password" className="text-sm font-medium">Password</Label>
                 <div className="relative">
                   <Input
                     id="password"
@@ -95,6 +119,8 @@ const Login = () => {
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     required
+                    className="h-11 pr-10"
+                    disabled={isLoading}
                   />
                   <Button
                     type="button"
@@ -102,6 +128,7 @@ const Login = () => {
                     size="sm"
                     className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
                     onClick={() => setShowPassword(!showPassword)}
+                    disabled={isLoading}
                   >
                     {showPassword ? (
                       <EyeOff className="h-4 w-4 text-gray-400" />
@@ -112,8 +139,19 @@ const Login = () => {
                 </div>
               </div>
 
-              <Button type="submit" className="w-full" disabled={isLoading}>
-                {isLoading ? "Signing in..." : "Sign In"}
+              <Button 
+                type="submit" 
+                className="w-full h-11 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700" 
+                disabled={isLoading}
+              >
+                {isLoading ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Signing in...
+                  </>
+                ) : (
+                  "Sign In"
+                )}
               </Button>
             </form>
 
@@ -129,8 +167,9 @@ const Login = () => {
 
               <Button
                 variant="outline"
-                className="w-full mt-4"
+                className="w-full mt-4 h-11"
                 onClick={handleGoogleLogin}
+                disabled={isLoading}
               >
                 <svg className="w-4 h-4 mr-2" viewBox="0 0 24 24">
                   <path
@@ -156,8 +195,8 @@ const Login = () => {
 
             <p className="text-center text-sm text-gray-600 mt-6">
               Don't have an account?{' '}
-              <Link to="/signup" className="font-semibold text-blue-600 hover:text-blue-700">
-                Sign up
+              <Link to="/signup" className="font-semibold text-blue-600 hover:text-blue-700 transition-colors">
+                Create account
               </Link>
             </p>
           </CardContent>
