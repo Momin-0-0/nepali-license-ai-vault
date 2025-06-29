@@ -59,7 +59,7 @@ const AppHeader = ({
             <div className="flex items-center gap-3 cursor-pointer" onClick={() => navigate('/dashboard')}>
               <div className="w-12 h-12 rounded-lg overflow-hidden shadow-lg hover:shadow-xl transition-shadow">
                 <img 
-                  src="/lovable-uploads/455034fe-c1dd-4b6a-91a0-baa4c7ab5738.png" 
+                  src="/Gemini_Generated_Image_w0veeiw0veeiw0ve 1.png" 
                   alt="NepLife Logo"
                   className="w-full h-full object-contain bg-white"
                 />

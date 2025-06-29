@@ -223,8 +223,12 @@ const Upload = () => {
               </Button>
               <Separator orientation="vertical" className="h-6" />
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-gradient-to-br from-blue-600 to-red-600 rounded-lg flex items-center justify-center">
-                  <Shield className="w-6 h-6 text-white" />
+                <div className="w-10 h-10 rounded-lg overflow-hidden shadow-lg">
+                  <img 
+                    src="/Gemini_Generated_Image_w0veeiw0veeiw0ve 1.png" 
+                    alt="NepLife Logo"
+                    className="w-full h-full object-contain bg-white"
+                  />
                 </div>
                 <div>
                   <h1 className="text-xl font-bold bg-gradient-to-r from-blue-600 to-red-600 bg-clip-text text-transparent">

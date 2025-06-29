@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Button } from "@/components/ui/button";
@@ -133,8 +132,12 @@ const Signup = () => {
         {/* Header */}
         <div className="text-center mb-8">
           <Link to="/" className="flex items-center justify-center gap-3 mb-6">
-            <div className="w-14 h-14 bg-gradient-to-br from-blue-600 to-red-600 rounded-xl flex items-center justify-center shadow-lg">
-              <Shield className="w-8 h-8 text-white" />
+            <div className="w-14 h-14 rounded-xl flex items-center justify-center shadow-lg overflow-hidden">
+              <img 
+                src="/Gemini_Generated_Image_w0veeiw0veeiw0ve 1.png" 
+                alt="NepLife Logo"
+                className="w-full h-full object-contain bg-white"
+              />
             </div>
             <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-600 to-red-600 bg-clip-text text-transparent">
               NepLife
