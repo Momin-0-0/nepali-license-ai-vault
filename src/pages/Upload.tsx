@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Shield, ArrowLeft, CheckCircle } from "lucide-react";
@@ -150,6 +149,10 @@ const Upload = () => {
     </div>
   );
 
+  const handleProceedToForm = () => {
+    setStep('form');
+  };
+
   if (step === 'complete') {
     return (
       <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-red-50 flex items-center justify-center">
@@ -211,27 +214,41 @@ const Upload = () => {
         <div className="max-w-6xl mx-auto">
           {renderStepIndicator()}
           
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-            <div className={`transition-all duration-300 ${step === 'form' ? 'lg:order-2' : ''}`}>
+          {step === 'upload' ? (
+            <div className="max-w-2xl mx-auto">
               <ImageUpload 
                 onDataExtracted={handleDataExtracted} 
                 onImageUploaded={setImagePreview}
               />
+              {imagePreview && (
+                <div className="mt-6 text-center">
+                  <Button onClick={handleProceedToForm} size="lg">
+                    Continue to License Details
+                  </Button>
+                </div>
+              )}
             </div>
-            
-            <div className={`transition-all duration-300 ${
-              step === 'upload' ? 'opacity-60 pointer-events-none' : 'opacity-100'
-            } ${step === 'form' ? 'lg:order-1' : ''}`}>
-              <LicenseForm 
-                licenseData={licenseData}
-                onDataChange={setLicenseData}
-                onSubmit={handleSubmit}
-                onCancel={() => navigate('/dashboard')}
-                isProcessing={isProcessing}
-                disabled={step === 'upload'}
-              />
+          ) : (
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+              <div className="lg:order-2">
+                <ImageUpload 
+                  onDataExtracted={handleDataExtracted} 
+                  onImageUploaded={setImagePreview}
+                />
+              </div>
+              
+              <div className="lg:order-1">
+                <LicenseForm 
+                  licenseData={licenseData}
+                  onDataChange={setLicenseData}
+                  onSubmit={handleSubmit}
+                  onCancel={() => navigate('/dashboard')}
+                  isProcessing={isProcessing}
+                  disabled={false}
+                />
+              </div>
             </div>
-          </div>
+          )}
         </div>
       </div>
     </div>
