@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -11,7 +10,9 @@ import {
   Image as ImageIcon,
   Calendar,
   MapPin,
-  Trash2
+  Trash2,
+  ZoomIn,
+  Eye
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -51,6 +52,8 @@ const LicenseCard = ({
   onViewImage,
   onDelete 
 }: LicenseCardProps) => {
+  const [imageError, setImageError] = useState(false);
+
   const getExpiryStatus = (expiryDate: string) => {
     const days = differenceInDays(parseISO(expiryDate), new Date());
     if (days < 0) return { status: 'expired', color: 'destructive', label: 'Expired' };
@@ -62,22 +65,37 @@ const LicenseCard = ({
   const { color, label } = getExpiryStatus(license.expiryDate);
   const daysLeft = differenceInDays(parseISO(license.expiryDate), new Date());
 
+  const handleImageError = () => {
+    setImageError(true);
+  };
+
+  const handleImageClick = () => {
+    if (license.image && !imageError) {
+      onViewImage(license);
+    }
+  };
+
   return (
     <Card className="hover:shadow-lg transition-all duration-200 hover:scale-[1.01] group">
       <CardContent className="p-0">
         <div className="flex">
           {/* License Image */}
           <div className="flex-shrink-0 p-4">
-            {license.image ? (
+            {license.image && !imageError ? (
               <div 
-                className="w-20 h-16 bg-gray-100 rounded-lg overflow-hidden cursor-pointer hover:opacity-80 transition-opacity shadow-sm"
-                onClick={() => onViewImage(license)}
+                className="w-20 h-16 bg-gray-100 rounded-lg overflow-hidden cursor-pointer hover:opacity-80 transition-all duration-200 shadow-sm hover:shadow-md relative group/image"
+                onClick={handleImageClick}
               >
                 <img
                   src={license.image}
                   alt={`License ${license.licenseNumber}`}
                   className="w-full h-full object-cover"
+                  onError={handleImageError}
                 />
+                {/* Hover overlay */}
+                <div className="absolute inset-0 bg-black bg-opacity-0 group-hover/image:bg-opacity-30 transition-all duration-200 flex items-center justify-center">
+                  <ZoomIn className="w-4 h-4 text-white opacity-0 group-hover/image:opacity-100 transition-opacity duration-200" />
+                </div>
               </div>
             ) : (
               <div className="w-20 h-16 bg-gradient-to-br from-gray-100 to-gray-200 rounded-lg flex items-center justify-center">
@@ -123,9 +141,9 @@ const LicenseCard = ({
                       <Download className="mr-2 h-4 w-4" />
                       Download
                     </DropdownMenuItem>
-                    {license.image && (
+                    {license.image && !imageError && (
                       <DropdownMenuItem onClick={() => onViewImage(license)} className="cursor-pointer">
-                        <ImageIcon className="mr-2 h-4 w-4" />
+                        <Eye className="mr-2 h-4 w-4" />
                         View Image
                       </DropdownMenuItem>
                     )}
