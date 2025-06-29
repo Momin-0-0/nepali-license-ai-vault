@@ -4,7 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { FileText, AlertCircle } from "lucide-react";
+import { FileText, AlertCircle, Loader2 } from "lucide-react";
 import { LicenseData } from '@/types/license';
 
 interface LicenseFormProps {
@@ -12,9 +12,18 @@ interface LicenseFormProps {
   onDataChange: (data: LicenseData) => void;
   onSubmit: (e: React.FormEvent) => void;
   onCancel: () => void;
+  isProcessing?: boolean;
+  disabled?: boolean;
 }
 
-const LicenseForm = ({ licenseData, onDataChange, onSubmit, onCancel }: LicenseFormProps) => {
+const LicenseForm = ({ 
+  licenseData, 
+  onDataChange, 
+  onSubmit, 
+  onCancel,
+  isProcessing = false,
+  disabled = false
+}: LicenseFormProps) => {
   const updateField = (field: keyof LicenseData, value: string) => {
     onDataChange({
       ...licenseData,
@@ -23,7 +32,7 @@ const LicenseForm = ({ licenseData, onDataChange, onSubmit, onCancel }: LicenseF
   };
 
   return (
-    <Card>
+    <Card className={disabled ? 'opacity-60' : ''}>
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <FileText className="w-5 h-5" />
@@ -43,6 +52,7 @@ const LicenseForm = ({ licenseData, onDataChange, onSubmit, onCancel }: LicenseF
               onChange={(e) => updateField('licenseNumber', e.target.value.toUpperCase())}
               placeholder="e.g., NP-12-345-678 or 4203055074"
               required
+              disabled={disabled}
             />
           </div>
 
@@ -53,6 +63,7 @@ const LicenseForm = ({ licenseData, onDataChange, onSubmit, onCancel }: LicenseF
               value={licenseData.holderName}
               onChange={(e) => updateField('holderName', e.target.value)}
               placeholder="Full name as on license"
+              disabled={disabled}
             />
           </div>
 
@@ -64,6 +75,7 @@ const LicenseForm = ({ licenseData, onDataChange, onSubmit, onCancel }: LicenseF
                 type="date"
                 value={licenseData.issueDate}
                 onChange={(e) => updateField('issueDate', e.target.value)}
+                disabled={disabled}
               />
             </div>
             <div className="space-y-2">
@@ -74,6 +86,7 @@ const LicenseForm = ({ licenseData, onDataChange, onSubmit, onCancel }: LicenseF
                 value={licenseData.expiryDate}
                 onChange={(e) => updateField('expiryDate', e.target.value)}
                 required
+                disabled={disabled}
               />
             </div>
           </div>
@@ -84,6 +97,7 @@ const LicenseForm = ({ licenseData, onDataChange, onSubmit, onCancel }: LicenseF
               id="issuingAuthority"
               value={licenseData.issuingAuthority}
               onChange={(e) => updateField('issuingAuthority', e.target.value)}
+              disabled={disabled}
             />
           </div>
 
@@ -95,6 +109,7 @@ const LicenseForm = ({ licenseData, onDataChange, onSubmit, onCancel }: LicenseF
               onChange={(e) => updateField('address', e.target.value)}
               placeholder="Address as on license"
               rows={3}
+              disabled={disabled}
             />
           </div>
 
@@ -109,11 +124,12 @@ const LicenseForm = ({ licenseData, onDataChange, onSubmit, onCancel }: LicenseF
           </div>
 
           <div className="flex gap-4 pt-4">
-            <Button type="button" variant="outline" onClick={onCancel}>
+            <Button type="button" variant="outline" onClick={onCancel} disabled={disabled || isProcessing}>
               Cancel
             </Button>
-            <Button type="submit" className="flex-1">
-              Save License
+            <Button type="submit" className="flex-1" disabled={disabled || isProcessing}>
+              {isProcessing && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+              {isProcessing ? 'Saving...' : 'Save License'}
             </Button>
           </div>
         </form>

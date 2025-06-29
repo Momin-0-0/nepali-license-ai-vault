@@ -166,7 +166,7 @@ const Dashboard = () => {
       <AppHeader 
         user={user} 
         isOnline={isOnline} 
-        notificationCount={expiringLicenses.length}
+        licenses={licenses}
       />
 
       <div className="container mx-auto px-4 py-8">

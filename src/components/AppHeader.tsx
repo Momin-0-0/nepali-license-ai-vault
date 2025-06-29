@@ -1,4 +1,3 @@
-
 import { Shield, User, LogOut, Menu, Settings, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -23,6 +22,7 @@ interface AppHeaderProps {
   licenses?: any[];
   showSearch?: boolean;
   onSearch?: (query: string) => void;
+  notificationCount?: number;
 }
 
 const AppHeader = ({ 
@@ -31,7 +31,8 @@ const AppHeader = ({
   onToggleSidebar, 
   licenses = [],
   showSearch = false,
-  onSearch
+  onSearch,
+  notificationCount = 0
 }: AppHeaderProps) => {
   const navigate = useNavigate();
   const { toast } = useToast();

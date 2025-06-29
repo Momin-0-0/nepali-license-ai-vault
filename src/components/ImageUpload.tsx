@@ -1,4 +1,3 @@
-
 import { useRef, useState } from 'react';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -9,9 +8,10 @@ import { LicenseData } from '@/types/license';
 
 interface ImageUploadProps {
   onDataExtracted: (data: Partial<LicenseData>) => void;
+  onImageUploaded?: (imageUrl: string) => void;
 }
 
-const ImageUpload = ({ onDataExtracted }: ImageUploadProps) => {
+const ImageUpload = ({ onDataExtracted, onImageUploaded }: ImageUploadProps) => {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string>('');
   const [isProcessing, setIsProcessing] = useState(false);
@@ -35,7 +35,9 @@ const ImageUpload = ({ onDataExtracted }: ImageUploadProps) => {
       setSelectedFile(file);
       const reader = new FileReader();
       reader.onload = (e) => {
-        setImagePreview(e.target?.result as string);
+        const imageUrl = e.target?.result as string;
+        setImagePreview(imageUrl);
+        onImageUploaded?.(imageUrl);
       };
       reader.readAsDataURL(file);
       setOcrComplete(false);
