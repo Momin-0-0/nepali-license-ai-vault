@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from "@/components/ui/button";
@@ -8,6 +7,7 @@ import { Shield, Share2, QrCode, Copy, Eye, Clock, Trash2, Plus } from "lucide-r
 import { useToast } from "@/hooks/use-toast";
 import { format, differenceInDays, parseISO } from 'date-fns';
 import QRCodeGenerator from "@/components/QRCodeGenerator";
+import { useLocalStorage } from "@/hooks/useLocalStorage";
 
 interface SharedLink {
   id: string;
@@ -21,39 +21,11 @@ interface SharedLink {
 }
 
 const SharedLinks = () => {
-  const [sharedLinks, setSharedLinks] = useState<SharedLink[]>([]);
-  const [licenses, setLicenses] = useState<any[]>([]);
+  const [sharedLinks, setSharedLinks] = useLocalStorage<SharedLink[]>('sharedLinks', [], true);
+  const [licenses] = useLocalStorage<any[]>('licenses', [], true);
   const [qrCodeModal, setQrCodeModal] = useState({ isOpen: false, shareUrl: '', licenseNumber: '' });
   const navigate = useNavigate();
   const { toast } = useToast();
-
-  useEffect(() => {
-    // Load shared links and licenses from localStorage
-    const savedLinks = localStorage.getItem('sharedLinks');
-    const savedLicenses = localStorage.getItem('licenses');
-    
-    console.log('Loading shared links:', savedLinks);
-    console.log('Loading licenses:', savedLicenses);
-    
-    if (savedLinks) {
-      try {
-        const parsedLinks = JSON.parse(savedLinks);
-        setSharedLinks(parsedLinks);
-      } catch (error) {
-        console.error('Error parsing shared links:', error);
-        setSharedLinks([]);
-      }
-    }
-    if (savedLicenses) {
-      try {
-        const parsedLicenses = JSON.parse(savedLicenses);
-        setLicenses(parsedLicenses);
-      } catch (error) {
-        console.error('Error parsing licenses:', error);
-        setLicenses([]);
-      }
-    }
-  }, []);
 
   const generateShareLink = (licenseId: string, expiryHours: number = 24, maxAccess?: number) => {
     const license = licenses.find(l => l.id === licenseId);
@@ -82,7 +54,6 @@ const SharedLinks = () => {
 
     const updatedLinks = [...sharedLinks, newSharedLink];
     setSharedLinks(updatedLinks);
-    localStorage.setItem('sharedLinks', JSON.stringify(updatedLinks));
 
     toast({
       title: "Share Link Created",
@@ -111,7 +82,6 @@ const SharedLinks = () => {
   const deleteSharedLink = (linkId: string) => {
     const updatedLinks = sharedLinks.filter(link => link.id !== linkId);
     setSharedLinks(updatedLinks);
-    localStorage.setItem('sharedLinks', JSON.stringify(updatedLinks));
     
     toast({
       title: "Link Deleted",
