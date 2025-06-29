@@ -1,7 +1,7 @@
 import { useRef, useState } from 'react';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Camera, FileText, Loader2, Check, UploadIcon } from "lucide-react";
+import { Camera, FileText, Loader2, Check, UploadIcon, ZoomIn, ZoomOut, RotateCcw } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { processImageWithOCR } from '@/utils/ocrUtils';
 import { LicenseData } from '@/types/license';
@@ -17,7 +17,12 @@ const ImageUpload = ({ onDataExtracted, onImageUploaded }: ImageUploadProps) => 
   const [isProcessing, setIsProcessing] = useState(false);
   const [ocrComplete, setOcrComplete] = useState(false);
   const [processingStep, setProcessingStep] = useState('');
+  const [zoomLevel, setZoomLevel] = useState(1);
+  const [imagePosition, setImagePosition] = useState({ x: 0, y: 0 });
+  const [isDragging, setIsDragging] = useState(false);
+  const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const imageRef = useRef<HTMLImageElement>(null);
   const { toast } = useToast();
 
   const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -38,6 +43,9 @@ const ImageUpload = ({ onDataExtracted, onImageUploaded }: ImageUploadProps) => 
         const imageUrl = e.target?.result as string;
         setImagePreview(imageUrl);
         onImageUploaded?.(imageUrl);
+        // Reset zoom and position when new image is loaded
+        setZoomLevel(1);
+        setImagePosition({ x: 0, y: 0 });
       };
       reader.readAsDataURL(file);
       setOcrComplete(false);
@@ -80,6 +88,51 @@ const ImageUpload = ({ onDataExtracted, onImageUploaded }: ImageUploadProps) => 
     }
   };
 
+  const handleZoomIn = () => {
+    setZoomLevel(prev => Math.min(prev + 0.25, 3));
+  };
+
+  const handleZoomOut = () => {
+    setZoomLevel(prev => Math.max(prev - 0.25, 0.5));
+  };
+
+  const handleResetZoom = () => {
+    setZoomLevel(1);
+    setImagePosition({ x: 0, y: 0 });
+  };
+
+  const handleMouseDown = (e: React.MouseEvent) => {
+    if (zoomLevel > 1) {
+      setIsDragging(true);
+      setDragStart({
+        x: e.clientX - imagePosition.x,
+        y: e.clientY - imagePosition.y
+      });
+    }
+  };
+
+  const handleMouseMove = (e: React.MouseEvent) => {
+    if (isDragging && zoomLevel > 1) {
+      setImagePosition({
+        x: e.clientX - dragStart.x,
+        y: e.clientY - dragStart.y
+      });
+    }
+  };
+
+  const handleMouseUp = () => {
+    setIsDragging(false);
+  };
+
+  const handleWheel = (e: React.WheelEvent) => {
+    e.preventDefault();
+    if (e.deltaY < 0) {
+      handleZoomIn();
+    } else {
+      handleZoomOut();
+    }
+  };
+
   return (
     <Card>
       <CardHeader>
@@ -95,11 +148,64 @@ const ImageUpload = ({ onDataExtracted, onImageUploaded }: ImageUploadProps) => 
         <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center">
           {imagePreview ? (
             <div className="space-y-4">
-              <img 
-                src={imagePreview} 
-                alt="License preview" 
-                className="max-w-full h-64 object-contain mx-auto rounded-lg shadow-md"
-              />
+              <div 
+                className="relative max-w-full h-64 mx-auto rounded-lg shadow-md overflow-hidden bg-gray-100 cursor-move"
+                onMouseDown={handleMouseDown}
+                onMouseMove={handleMouseMove}
+                onMouseUp={handleMouseUp}
+                onMouseLeave={handleMouseUp}
+                onWheel={handleWheel}
+              >
+                <img 
+                  ref={imageRef}
+                  src={imagePreview} 
+                  alt="License preview" 
+                  className="object-contain transition-transform duration-200 select-none"
+                  style={{ 
+                    transform: `scale(${zoomLevel}) translate(${imagePosition.x / zoomLevel}px, ${imagePosition.y / zoomLevel}px)`,
+                    transformOrigin: 'center center',
+                    width: '100%',
+                    height: '100%',
+                    cursor: zoomLevel > 1 ? (isDragging ? 'grabbing' : 'grab') : 'default'
+                  }}
+                  draggable={false}
+                />
+              </div>
+              
+              {/* Zoom Controls */}
+              <div className="flex items-center justify-center gap-2 bg-gray-50 rounded-lg p-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleZoomOut}
+                  disabled={zoomLevel <= 0.5}
+                  className="h-8 w-8 p-0"
+                >
+                  <ZoomOut className="w-4 h-4" />
+                </Button>
+                <span className="text-sm font-medium min-w-[60px] text-center">
+                  {Math.round(zoomLevel * 100)}%
+                </span>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleZoomIn}
+                  disabled={zoomLevel >= 3}
+                  className="h-8 w-8 p-0"
+                >
+                  <ZoomIn className="w-4 h-4" />
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleResetZoom}
+                  className="h-8 px-3"
+                >
+                  <RotateCcw className="w-4 h-4 mr-1" />
+                  Reset
+                </Button>
+              </div>
+              
               <div className="flex gap-2 justify-center">
                 <Button 
                   variant="outline" 
@@ -113,6 +219,10 @@ const ImageUpload = ({ onDataExtracted, onImageUploaded }: ImageUploadProps) => 
                     Extract Data
                   </Button>
                 )}
+              </div>
+              
+              <div className="text-xs text-gray-500 text-center">
+                Use mouse wheel to zoom • Click and drag to pan when zoomed
               </div>
             </div>
           ) : (
