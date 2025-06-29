@@ -1,29 +1,84 @@
-
 {
-  "name": "NepLife - Nepali License AI Vault",
+  "name": "NepLife - Smart Driving License Management",
   "short_name": "NepLife",
-  "description": "Secure digital vault for Nepali driving licenses with AI-powered features",
+  "description": "Digitize, manage, and share your driving license with AI-powered OCR technology",
   "start_url": "/",
   "display": "standalone",
-  "theme_color": "#2563eb",
+  "theme_color": "#3B82F6",
   "background_color": "#ffffff",
-  "orientation": "portrait",
+  "orientation": "portrait-primary",
+  "scope": "/",
+  "lang": "en-US",
+  "dir": "ltr",
+  "categories": ["utilities", "productivity", "business"],
   "icons": [
     {
       "src": "/favicon.ico",
       "sizes": "64x64 32x32 24x24 16x16",
-      "type": "image/x-icon"
+      "type": "image/x-icon",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/Gemini_Generated_Image_w0veeiw0veeiw0ve 1.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/Gemini_Generated_Image_w0veeiw0veeiw0ve 1.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
     }
   ],
-  "categories": ["utilities", "productivity"],
-  "lang": "en-US",
-  "scope": "/",
   "screenshots": [
     {
       "src": "/placeholder.svg",
       "sizes": "540x720",
       "type": "image/svg+xml",
-      "form_factor": "narrow"
+      "form_factor": "narrow",
+      "label": "Mobile view of NepLife dashboard"
+    },
+    {
+      "src": "/placeholder.svg",
+      "sizes": "1280x720",
+      "type": "image/svg+xml",
+      "form_factor": "wide",
+      "label": "Desktop view of NepLife dashboard"
     }
-  ]
+  ],
+  "shortcuts": [
+    {
+      "name": "Upload License",
+      "short_name": "Upload",
+      "description": "Upload a new driving license",
+      "url": "/upload",
+      "icons": [
+        {
+          "src": "/favicon.ico",
+          "sizes": "96x96"
+        }
+      ]
+    },
+    {
+      "name": "Dashboard",
+      "short_name": "Dashboard",
+      "description": "View your license dashboard",
+      "url": "/dashboard",
+      "icons": [
+        {
+          "src": "/favicon.ico",
+          "sizes": "96x96"
+        }
+      ]
+    }
+  ],
+  "related_applications": [],
+  "prefer_related_applications": false,
+  "edge_side_panel": {
+    "preferred_width": 400
+  },
+  "launch_handler": {
+    "client_mode": "navigate-existing"
+  }
 }
