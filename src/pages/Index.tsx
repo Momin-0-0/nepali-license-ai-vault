@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Button } from "@/components/ui/button";
@@ -13,12 +14,8 @@ const Index = () => {
       <header className="border-b bg-white/95 backdrop-blur-md sticky top-0 z-50 shadow-sm">
         <div className="container mx-auto px-4 py-4 flex justify-between items-center">
           <Link to="/" className="flex items-center gap-3 group">
-            <div className="w-10 h-10 rounded-xl flex items-center justify-center shadow-lg group-hover:shadow-xl transition-all duration-300 group-hover:scale-105 overflow-hidden">
-              <img 
-                src="/Gemini_Generated_Image_w0veeiw0veeiw0ve 1.png" 
-                alt="NepLife Logo"
-                className="w-full h-full object-contain bg-white"
-              />
+            <div className="w-10 h-10 bg-gradient-to-br from-blue-600 to-red-600 rounded-xl flex items-center justify-center shadow-lg group-hover:shadow-xl transition-all duration-300 group-hover:scale-105">
+              <Shield className="w-6 h-6 text-white" />
             </div>
             <h1 className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-red-600 bg-clip-text text-transparent">
               NepLife
@@ -236,12 +233,8 @@ const Index = () => {
           <div className="grid md:grid-cols-4 gap-12 mb-12">
             <div>
               <div className="flex items-center gap-3 mb-6">
-                <div className="w-10 h-10 rounded-xl flex items-center justify-center shadow-lg overflow-hidden">
-                  <img 
-                    src="/Gemini_Generated_Image_w0veeiw0veeiw0ve 1.png" 
-                    alt="NepLife Logo"
-                    className="w-full h-full object-contain bg-white"
-                  />
+                <div className="w-10 h-10 bg-gradient-to-br from-blue-600 to-red-600 rounded-xl flex items-center justify-center shadow-lg">
+                  <Shield className="w-6 h-6 text-white" />
                 </div>
                 <h4 className="text-2xl font-bold">NepLife</h4>
               </div>

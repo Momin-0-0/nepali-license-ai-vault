@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Button } from "@/components/ui/button";
@@ -73,12 +74,8 @@ const Login = () => {
         {/* Enhanced Header */}
         <div className="text-center mb-8">
           <Link to="/" className="flex items-center justify-center gap-3 mb-6 group">
-            <div className="w-12 h-12 rounded-xl flex items-center justify-center shadow-lg group-hover:shadow-xl transition-shadow overflow-hidden">
-              <img 
-                src="/Gemini_Generated_Image_w0veeiw0veeiw0ve 1.png" 
-                alt="NepLife Logo"
-                className="w-full h-full object-contain bg-white"
-              />
+            <div className="w-12 h-12 bg-gradient-to-br from-blue-600 to-red-600 rounded-xl flex items-center justify-center shadow-lg group-hover:shadow-xl transition-shadow">
+              <Shield className="w-7 h-7 text-white" />
             </div>
             <h1 className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-red-600 bg-clip-text text-transparent">
               NepLife
