@@ -108,10 +108,16 @@ const DashboardSidebar = ({ licenses, expiringCount, sharedCount }: DashboardSid
 
         {/* Quick Stats */}
         {!collapsed && (
-          <Card className="p-4 mb-6 bg-gradient-to-br from-blue-50 to-purple-50">
+          <Card className="p-4 mb-6 bg-gradient-to-br from-blue-50 to-green-50">
             <div className="flex items-center gap-3 mb-3">
-              <Shield className="w-5 h-5 text-blue-600" />
-              <span className="font-semibold text-gray-900">License Vault</span>
+              <div className="w-8 h-8 rounded-lg overflow-hidden">
+                <img 
+                  src="/lovable-uploads/455034fe-c1dd-4b6a-91a0-baa4c7ab5738.png" 
+                  alt="NepLife Logo"
+                  className="w-full h-full object-contain bg-white"
+                />
+              </div>
+              <span className="font-semibold text-gray-900">NepLife Vault</span>
             </div>
             <div className="grid grid-cols-2 gap-3 text-sm">
               <div className="text-center">
@@ -136,7 +142,7 @@ const DashboardSidebar = ({ licenses, expiringCount, sharedCount }: DashboardSid
               variant={isActivePath(item.path) ? "default" : "ghost"}
               className={`w-full justify-start ${
                 isActivePath(item.path) 
-                  ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white' 
+                  ? 'bg-gradient-to-r from-blue-600 to-green-600 text-white' 
                   : 'hover:bg-gray-50'
               } ${collapsed ? 'px-2' : 'px-3'}`}
               onClick={() => navigate(item.path)}

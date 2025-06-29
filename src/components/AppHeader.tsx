@@ -1,3 +1,4 @@
+
 import { Shield, User, LogOut, Menu, Settings, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -22,7 +23,6 @@ interface AppHeaderProps {
   licenses?: any[];
   showSearch?: boolean;
   onSearch?: (query: string) => void;
-  notificationCount?: number;
 }
 
 const AppHeader = ({ 
@@ -31,8 +31,7 @@ const AppHeader = ({
   onToggleSidebar, 
   licenses = [],
   showSearch = false,
-  onSearch,
-  notificationCount = 0
+  onSearch
 }: AppHeaderProps) => {
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -58,12 +57,16 @@ const AppHeader = ({
               </Button>
             )}
             
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-gradient-to-br from-blue-600 to-red-600 rounded-lg flex items-center justify-center shadow-lg">
-                <Shield className="w-6 h-6 text-white" />
+            <div className="flex items-center gap-3 cursor-pointer" onClick={() => navigate('/dashboard')}>
+              <div className="w-12 h-12 rounded-lg overflow-hidden shadow-lg hover:shadow-xl transition-shadow">
+                <img 
+                  src="/lovable-uploads/455034fe-c1dd-4b6a-91a0-baa4c7ab5738.png" 
+                  alt="NepLife Logo"
+                  className="w-full h-full object-contain bg-white"
+                />
               </div>
               <div>
-                <h1 className="text-xl font-bold bg-gradient-to-r from-blue-600 to-red-600 bg-clip-text text-transparent">
+                <h1 className="text-xl font-bold bg-gradient-to-r from-blue-600 to-green-600 bg-clip-text text-transparent">
                   NepLife
                 </h1>
                 <div className="flex items-center gap-2">
@@ -101,7 +104,7 @@ const AppHeader = ({
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" className="relative h-9 px-2 gap-2">
                   <Avatar className="h-8 w-8">
-                    <AvatarFallback className="bg-gradient-to-br from-blue-500 to-purple-500 text-white text-sm">
+                    <AvatarFallback className="bg-gradient-to-br from-blue-500 to-green-500 text-white text-sm">
                       {user?.name?.charAt(0)?.toUpperCase() || 'U'}
                     </AvatarFallback>
                   </Avatar>
