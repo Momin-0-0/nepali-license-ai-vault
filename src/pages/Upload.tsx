@@ -9,6 +9,10 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
+import { useLocalStorage } from '@/hooks/useLocalStorage';
+import { validateImageFile } from '@/utils/validation';
+import { compressImage } from '@/utils/performance';
+import { generateSecureToken } from '@/utils/security';
 
 const Upload = () => {
   const [imagePreview, setImagePreview] = useState<string>('');
@@ -22,6 +26,7 @@ const Upload = () => {
   });
   const [step, setStep] = useState<'upload' | 'form' | 'complete'>('upload');
   const [isProcessing, setIsProcessing] = useState(false);
+  const [licenses, setLicenses] = useLocalStorage<any[]>('licenses', [], true);
   const { toast } = useToast();
   const navigate = useNavigate();
 
@@ -41,6 +46,38 @@ const Upload = () => {
     }
   };
 
+  const handleImageUploaded = async (imageUrl: string) => {
+    setImagePreview(imageUrl);
+    
+    // Compress image for better performance
+    try {
+      const response = await fetch(imageUrl);
+      const blob = await response.blob();
+      const file = new File([blob], 'license.jpg', { type: 'image/jpeg' });
+      
+      const validation = validateImageFile(file);
+      if (!validation.isValid) {
+        toast({
+          title: "Invalid Image",
+          description: validation.errors.join(', '),
+          variant: "destructive",
+        });
+        return;
+      }
+
+      const compressedBlob = await compressImage(file, 0.8);
+      const compressedUrl = URL.createObjectURL(compressedBlob);
+      setImagePreview(compressedUrl);
+    } catch (error) {
+      console.error('Image compression failed:', error);
+      // Continue with original image if compression fails
+    }
+  };
+
+  const handleProceedToForm = () => {
+    setStep('form');
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsProcessing(true);
@@ -56,11 +93,8 @@ const Upload = () => {
     }
 
     try {
-      // Get existing licenses from localStorage
-      const existingLicenses = JSON.parse(localStorage.getItem('licenses') || '[]');
-      
       // Check for duplicates
-      const isDuplicate = existingLicenses.some((license: any) => 
+      const isDuplicate = licenses.some((license: any) => 
         license.licenseNumber === licenseData.licenseNumber
       );
       
@@ -74,18 +108,19 @@ const Upload = () => {
         return;
       }
       
-      // Create new license object
+      // Create new license object with secure ID
       const newLicense = {
-        id: Date.now().toString(),
+        id: generateSecureToken(),
         ...licenseData,
         image: imagePreview,
         shared: false,
-        createdAt: new Date().toISOString()
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
       };
 
-      // Save to localStorage
-      const updatedLicenses = [...existingLicenses, newLicense];
-      localStorage.setItem('licenses', JSON.stringify(updatedLicenses));
+      // Save to encrypted localStorage
+      const updatedLicenses = [...licenses, newLicense];
+      setLicenses(updatedLicenses);
 
       setStep('complete');
       
@@ -98,6 +133,7 @@ const Upload = () => {
       }, 2000);
       
     } catch (error) {
+      console.error('Save error:', error);
       toast({
         title: "Error",
         description: "Failed to save license. Please try again.",
@@ -148,10 +184,6 @@ const Upload = () => {
       </div>
     </div>
   );
-
-  const handleProceedToForm = () => {
-    setStep('form');
-  };
 
   if (step === 'complete') {
     return (
@@ -218,7 +250,7 @@ const Upload = () => {
             <div className="max-w-2xl mx-auto">
               <ImageUpload 
                 onDataExtracted={handleDataExtracted} 
-                onImageUploaded={setImagePreview}
+                onImageUploaded={handleImageUploaded}
               />
               {imagePreview && (
                 <div className="mt-6 text-center">
@@ -233,7 +265,7 @@ const Upload = () => {
               <div className="lg:order-2">
                 <ImageUpload 
                   onDataExtracted={handleDataExtracted} 
-                  onImageUploaded={setImagePreview}
+                  onImageUploaded={handleImageUploaded}
                 />
               </div>
               

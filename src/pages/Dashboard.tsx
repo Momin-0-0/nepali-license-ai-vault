@@ -12,7 +12,9 @@ import AppHeader from "@/components/AppHeader";
 import QuickActionCard from "@/components/QuickActionCard";
 import LicenseCard from "@/components/LicenseCard";
 import EmptyState from "@/components/EmptyState";
+import LoadingSpinner from "@/components/LoadingSpinner";
 import { useOfflineSync } from "@/hooks/useOfflineSync";
+import { useLocalStorage } from "@/hooks/useLocalStorage";
 
 interface License {
   id: string;
@@ -25,140 +27,84 @@ interface License {
 }
 
 const Dashboard = () => {
-  const [user, setUser] = useState<any>(null);
-  const [licenses, setLicenses] = useState<License[]>([
-    {
-      id: '1',
-      licenseNumber: 'NP-12-345-678',
-      issueDate: '2023-01-15',
-      expiryDate: '2025-01-15',
-      issuingAuthority: 'Department of Transport Management',
-      shared: false
-    }
-  ]);
-  const [reminders, setReminders] = useState<any[]>([]);
+  const [user] = useLocalStorage('user', null, true);
+  const [licenses, setLicenses] = useLocalStorage<License[]>('licenses', [], true);
+  const [reminders, setReminders] = useLocalStorage<any[]>('reminders', [], false);
   const [isRemindersOpen, setIsRemindersOpen] = useState(false);
   const [selectedImageLicense, setSelectedImageLicense] = useState<License | null>(null);
-  const [dataLoaded, setDataLoaded] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { isOnline, saveOfflineCollection, getOfflineData } = useOfflineSync();
-
-  // Memoize the data loading function to prevent recreating it on every render
-  const loadData = useCallback(async () => {
-    if (dataLoaded) return;
-    
-    try {
-      console.log('Loading offline data...');
-      const savedLicenses = await getOfflineData('licenses');
-      const savedReminders = await getOfflineData('reminders');
-      
-      console.log('Loaded licenses:', savedLicenses);
-      console.log('Loaded reminders:', savedReminders);
-      
-      if (savedLicenses && savedLicenses.length > 0) {
-        setLicenses(savedLicenses);
-      }
-      if (savedReminders && savedReminders.length > 0) {
-        setReminders(savedReminders);
-      }
-      
-      setDataLoaded(true);
-    } catch (error) {
-      console.error('Error loading offline data:', error);
-      // Fallback to localStorage
-      const savedLicenses = localStorage.getItem('licenses');
-      const savedReminders = localStorage.getItem('reminders');
-      
-      if (savedLicenses) {
-        const parsedLicenses = JSON.parse(savedLicenses);
-        if (parsedLicenses.length > 0) {
-          setLicenses(parsedLicenses);
-        }
-      }
-      if (savedReminders) {
-        setReminders(JSON.parse(savedReminders));
-      }
-      
-      setDataLoaded(true);
-    }
-  }, [getOfflineData, dataLoaded]);
+  const { isOnline } = useOfflineSync();
 
   useEffect(() => {
-    const userData = localStorage.getItem('user');
-    if (!userData) {
+    if (!user) {
       navigate('/login');
-    } else {
-      setUser(JSON.parse(userData));
+      return;
     }
+    
+    // Simulate loading time for better UX
+    setTimeout(() => {
+      setIsLoading(false);
+    }, 500);
+  }, [user, navigate]);
 
-    // Load saved licenses and reminders
-    loadData();
-  }, [navigate, loadData]);
-
-  // Save data offline when it changes - but only after initial load
-  useEffect(() => {
-    if (dataLoaded && licenses.length > 0) {
-      console.log('Saving licenses to offline storage...');
-      saveOfflineCollection('licenses', licenses).catch(console.error);
-    }
-  }, [licenses, saveOfflineCollection, dataLoaded]);
-
-  useEffect(() => {
-    if (dataLoaded && reminders.length > 0) {
-      console.log('Saving reminders to offline storage...');
-      saveOfflineCollection('reminders', reminders).catch(console.error);
-    }
-  }, [reminders, saveOfflineCollection, dataLoaded]);
-
-  const handleLogout = () => {
-    localStorage.removeItem('user');
+  const handleLogout = useCallback(() => {
+    localStorage.clear();
     toast({
       title: "Logged out",
       description: "You have been logged out successfully",
     });
     navigate('/');
-  };
+  }, [toast, navigate]);
 
-  const handleRenewLicense = (licenseId: string) => {
+  const handleRenewLicense = useCallback((licenseId: string) => {
     toast({
       title: "Renewal Process",
       description: "Redirecting to license renewal portal...",
     });
     // In a real app, this would redirect to government renewal portal
-  };
+  }, [toast]);
 
-  const handleEditLicense = (licenseId: string) => {
+  const handleEditLicense = useCallback((licenseId: string) => {
     navigate(`/edit-license/${licenseId}`);
-  };
+  }, [navigate]);
 
-  const handleShareLicense = (licenseId: string) => {
-    navigate('/create-share', { state: { licenseId } });
-  };
+  const handleShareLicense = useCallback((licenseId: string) => {
+    navigate('/shared-links', { state: { licenseId } });
+  }, [navigate]);
 
-  const handleDownloadLicense = (licenseId: string) => {
+  const handleDownloadLicense = useCallback((licenseId: string) => {
     toast({
       title: "Download Started",
       description: "Your license document is being prepared...",
     });
     // In a real app, this would generate and download the license
-  };
+  }, [toast]);
 
-  const getExpiryStatus = (expiryDate: string) => {
+  const getExpiryStatus = useCallback((expiryDate: string) => {
     const days = differenceInDays(parseISO(expiryDate), new Date());
     if (days < 0) return { status: 'expired', color: 'text-red-600', bg: 'bg-red-50' };
     if (days <= 7) return { status: 'critical', color: 'text-orange-600', bg: 'bg-orange-50' };
     if (days <= 30) return { status: 'warning', color: 'text-yellow-600', bg: 'bg-yellow-50' };
     return { status: 'good', color: 'text-green-600', bg: 'bg-green-50' };
-  };
+  }, []);
 
   const expiringLicenses = licenses.filter(license => {
     const days = differenceInDays(parseISO(license.expiryDate), new Date());
     return days <= 30 && days >= 0;
   });
 
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-red-50 flex items-center justify-center">
+        <LoadingSpinner size="lg" text="Loading your dashboard..." />
+      </div>
+    );
+  }
+
   if (!user) {
-    return <div>Loading...</div>;
+    return null;
   }
 
   return (
@@ -173,7 +119,7 @@ const Dashboard = () => {
         {/* Welcome Section */}
         <div className="mb-8">
           <h2 className="text-3xl font-bold text-gray-900 mb-2">
-            Welcome back, {user?.name}!
+            Welcome back, {user?.name || user?.firstName || 'User'}!
           </h2>
           <p className="text-gray-600">
             Manage your driving licenses and stay on top of renewals

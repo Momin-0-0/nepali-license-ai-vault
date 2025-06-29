@@ -1,11 +1,12 @@
-
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { FileText, AlertCircle, Loader2 } from "lucide-react";
+import { FileText, AlertCircle, Loader2, CheckCircle, XCircle } from "lucide-react";
 import { LicenseData } from '@/types/license';
+import { validateLicenseNumber, validateDate, validateExpiryDate, sanitizeInput } from '@/utils/validation';
 
 interface LicenseFormProps {
   licenseData: LicenseData;
@@ -24,11 +25,111 @@ const LicenseForm = ({
   isProcessing = false,
   disabled = false
 }: LicenseFormProps) => {
+  const [errors, setErrors] = useState<Record<string, string[]>>({});
+  const [touched, setTouched] = useState<Record<string, boolean>>({});
+
   const updateField = (field: keyof LicenseData, value: string) => {
+    const sanitizedValue = sanitizeInput(value);
     onDataChange({
       ...licenseData,
-      [field]: value
+      [field]: sanitizedValue
     });
+    
+    // Clear errors when user starts typing
+    if (errors[field]) {
+      setErrors(prev => ({ ...prev, [field]: [] }));
+    }
+  };
+
+  const validateField = (field: keyof LicenseData, value: string) => {
+    let fieldErrors: string[] = [];
+
+    switch (field) {
+      case 'licenseNumber':
+        const licenseValidation = validateLicenseNumber(value);
+        if (!licenseValidation.isValid) {
+          fieldErrors = licenseValidation.errors;
+        }
+        break;
+      
+      case 'issueDate':
+        const issueDateValidation = validateDate(value, 'Issue date');
+        if (!issueDateValidation.isValid) {
+          fieldErrors = issueDateValidation.errors;
+        }
+        break;
+      
+      case 'expiryDate':
+        const expiryDateValidation = validateDate(value, 'Expiry date');
+        if (!expiryDateValidation.isValid) {
+          fieldErrors = expiryDateValidation.errors;
+        } else if (licenseData.issueDate) {
+          const dateRangeValidation = validateExpiryDate(licenseData.issueDate, value);
+          if (!dateRangeValidation.isValid) {
+            fieldErrors = [...fieldErrors, ...dateRangeValidation.errors];
+          }
+        }
+        break;
+      
+      case 'holderName':
+        if (value && value.length < 2) {
+          fieldErrors.push('Name must be at least 2 characters');
+        }
+        if (value && !/^[a-zA-Z\s.'-]+$/.test(value)) {
+          fieldErrors.push('Name can only contain letters, spaces, dots, hyphens, and apostrophes');
+        }
+        break;
+      
+      case 'issuingAuthority':
+        if (value && value.length < 3) {
+          fieldErrors.push('Issuing authority must be at least 3 characters');
+        }
+        break;
+    }
+
+    setErrors(prev => ({ ...prev, [field]: fieldErrors }));
+    return fieldErrors.length === 0;
+  };
+
+  const handleBlur = (field: keyof LicenseData) => {
+    setTouched(prev => ({ ...prev, [field]: true }));
+    validateField(field, licenseData[field]);
+  };
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    // Validate all fields
+    const allFields: (keyof LicenseData)[] = ['licenseNumber', 'expiryDate', 'issueDate', 'holderName', 'issuingAuthority', 'address'];
+    let hasErrors = false;
+    
+    allFields.forEach(field => {
+      const isValid = validateField(field, licenseData[field]);
+      if (!isValid) hasErrors = true;
+      setTouched(prev => ({ ...prev, [field]: true }));
+    });
+
+    if (hasErrors) {
+      return;
+    }
+
+    onSubmit(e);
+  };
+
+  const getFieldStatus = (field: keyof LicenseData) => {
+    if (!touched[field]) return null;
+    return errors[field]?.length > 0 ? 'error' : 'success';
+  };
+
+  const renderFieldIcon = (field: keyof LicenseData) => {
+    const status = getFieldStatus(field);
+    if (status === 'error') {
+      return <XCircle className="w-4 h-4 text-red-500" />;
+    }
+    if (status === 'success' && licenseData[field]) {
+      return <CheckCircle className="w-4 h-4 text-green-500" />;
+    }
+    return null;
   };
 
   return (
@@ -43,74 +144,122 @@ const LicenseForm = ({
         </CardDescription>
       </CardHeader>
       <CardContent>
-        <form onSubmit={onSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="licenseNumber">License Number *</Label>
+            <Label htmlFor="licenseNumber" className="flex items-center gap-2">
+              License Number *
+              {renderFieldIcon('licenseNumber')}
+            </Label>
             <Input
               id="licenseNumber"
               value={licenseData.licenseNumber}
               onChange={(e) => updateField('licenseNumber', e.target.value.toUpperCase())}
+              onBlur={() => handleBlur('licenseNumber')}
               placeholder="e.g., NP-12-345-678 or 4203055074"
               required
               disabled={disabled}
+              className={errors.licenseNumber?.length > 0 ? 'border-red-500' : ''}
             />
+            {touched.licenseNumber && errors.licenseNumber?.map((error, index) => (
+              <p key={index} className="text-sm text-red-500">{error}</p>
+            ))}
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="holderName">Holder Name</Label>
+            <Label htmlFor="holderName" className="flex items-center gap-2">
+              Holder Name
+              {renderFieldIcon('holderName')}
+            </Label>
             <Input
               id="holderName"
               value={licenseData.holderName}
               onChange={(e) => updateField('holderName', e.target.value)}
+              onBlur={() => handleBlur('holderName')}
               placeholder="Full name as on license"
               disabled={disabled}
+              className={errors.holderName?.length > 0 ? 'border-red-500' : ''}
             />
+            {touched.holderName && errors.holderName?.map((error, index) => (
+              <p key={index} className="text-sm text-red-500">{error}</p>
+            ))}
           </div>
 
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="issueDate">Issue Date</Label>
+              <Label htmlFor="issueDate" className="flex items-center gap-2">
+                Issue Date
+                {renderFieldIcon('issueDate')}
+              </Label>
               <Input
                 id="issueDate"
                 type="date"
                 value={licenseData.issueDate}
                 onChange={(e) => updateField('issueDate', e.target.value)}
+                onBlur={() => handleBlur('issueDate')}
                 disabled={disabled}
+                className={errors.issueDate?.length > 0 ? 'border-red-500' : ''}
               />
+              {touched.issueDate && errors.issueDate?.map((error, index) => (
+                <p key={index} className="text-sm text-red-500">{error}</p>
+              ))}
             </div>
             <div className="space-y-2">
-              <Label htmlFor="expiryDate">Expiry Date *</Label>
+              <Label htmlFor="expiryDate" className="flex items-center gap-2">
+                Expiry Date *
+                {renderFieldIcon('expiryDate')}
+              </Label>
               <Input
                 id="expiryDate"
                 type="date"
                 value={licenseData.expiryDate}
                 onChange={(e) => updateField('expiryDate', e.target.value)}
+                onBlur={() => handleBlur('expiryDate')}
                 required
                 disabled={disabled}
+                className={errors.expiryDate?.length > 0 ? 'border-red-500' : ''}
               />
+              {touched.expiryDate && errors.expiryDate?.map((error, index) => (
+                <p key={index} className="text-sm text-red-500">{error}</p>
+              ))}
             </div>
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="issuingAuthority">Issuing Authority</Label>
+            <Label htmlFor="issuingAuthority" className="flex items-center gap-2">
+              Issuing Authority
+              {renderFieldIcon('issuingAuthority')}
+            </Label>
             <Input
               id="issuingAuthority"
               value={licenseData.issuingAuthority}
               onChange={(e) => updateField('issuingAuthority', e.target.value)}
+              onBlur={() => handleBlur('issuingAuthority')}
               disabled={disabled}
+              className={errors.issuingAuthority?.length > 0 ? 'border-red-500' : ''}
             />
+            {touched.issuingAuthority && errors.issuingAuthority?.map((error, index) => (
+              <p key={index} className="text-sm text-red-500">{error}</p>
+            ))}
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="address">Address</Label>
+            <Label htmlFor="address" className="flex items-center gap-2">
+              Address
+              {renderFieldIcon('address')}
+            </Label>
             <Textarea
               id="address"
               value={licenseData.address}
               onChange={(e) => updateField('address', e.target.value)}
+              onBlur={() => handleBlur('address')}
               placeholder="Address as on license"
               rows={3}
               disabled={disabled}
+              className={errors.address?.length > 0 ? 'border-red-500' : ''}
             />
+            {touched.address && errors.address?.map((error, index) => (
+              <p key={index} className="text-sm text-red-500">{error}</p>
+            ))}
           </div>
 
           <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
