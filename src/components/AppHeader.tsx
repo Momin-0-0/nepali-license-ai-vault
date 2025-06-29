@@ -1,5 +1,4 @@
-
-import { Shield, User, LogOut, Menu, Settings, Search } from "lucide-react";
+import { Shield, User, LogOut, Menu, Settings, Search, BarChart3 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -105,18 +104,20 @@ const AppHeader = ({
                 <Button variant="ghost" className="relative h-9 px-2 gap-2">
                   <Avatar className="h-8 w-8">
                     <AvatarFallback className="bg-gradient-to-br from-blue-500 to-green-500 text-white text-sm">
-                      {user?.name?.charAt(0)?.toUpperCase() || 'U'}
+                      {user?.name?.charAt(0)?.toUpperCase() || user?.firstName?.charAt(0)?.toUpperCase() || 'U'}
                     </AvatarFallback>
                   </Avatar>
                   <span className="text-sm font-medium hidden sm:inline-block max-w-[100px] truncate">
-                    {user?.name || 'User'}
+                    {user?.name || user?.firstName || 'User'}
                   </span>
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent className="w-56 bg-white shadow-xl" align="end" forceMount>
                 <DropdownMenuLabel className="font-normal">
                   <div className="flex flex-col space-y-1">
-                    <p className="text-sm font-medium leading-none">{user?.name || 'User'}</p>
+                    <p className="text-sm font-medium leading-none">
+                      {user?.name || `${user?.firstName} ${user?.lastName}` || 'User'}
+                    </p>
                     <p className="text-xs leading-none text-muted-foreground">{user?.email}</p>
                   </div>
                 </DropdownMenuLabel>
@@ -124,6 +125,10 @@ const AppHeader = ({
                 <DropdownMenuItem onClick={() => navigate('/profile')} className="cursor-pointer">
                   <User className="mr-2 h-4 w-4" />
                   Profile
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => navigate('/analytics')} className="cursor-pointer">
+                  <BarChart3 className="mr-2 h-4 w-4" />
+                  Analytics
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => navigate('/settings')} className="cursor-pointer">
                   <Settings className="mr-2 h-4 w-4" />

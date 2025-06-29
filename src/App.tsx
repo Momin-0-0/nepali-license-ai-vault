@@ -13,6 +13,8 @@ import SharedLinks from "./pages/SharedLinks";
 import SharedLicense from "./pages/SharedLicense";
 import AllLicenses from "./pages/AllLicenses";
 import Profile from "./pages/Profile";
+import Settings from "./pages/Settings";
+import Analytics from "./pages/Analytics";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient({
@@ -46,6 +48,8 @@ const App = () => (
             <Route path="/shared/:shareToken" element={<SharedLicense />} />
             <Route path="/all-licenses" element={<AllLicenses />} />
             <Route path="/profile" element={<Profile />} />
+            <Route path="/settings" element={<Settings />} />
+            <Route path="/analytics" element={<Analytics />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>
