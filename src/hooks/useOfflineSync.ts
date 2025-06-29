@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 
 interface OfflineData {
@@ -67,7 +66,7 @@ export const useOfflineSync = () => {
     });
   };
 
-  const saveOfflineData = async (storeName: string, data: any) => {
+  const saveOfflineItem = async (storeName: string, data: any) => {
     try {
       const db = await openDB();
       const transaction = db.transaction([storeName], 'readwrite');
@@ -81,13 +80,48 @@ export const useOfflineSync = () => {
       localStorage.setItem(storeName, JSON.stringify(updatedData));
       
     } catch (error) {
-      console.error('Error saving offline data:', error);
+      console.error('Error saving offline item:', error);
       // Fallback to localStorage only
       const existingData = JSON.parse(localStorage.getItem(storeName) || '[]');
       const updatedData = existingData.filter((item: any) => item.id !== data.id);
       updatedData.push(data);
       localStorage.setItem(storeName, JSON.stringify(updatedData));
     }
+  };
+
+  const saveOfflineCollection = async (storeName: string, dataArray: any[]) => {
+    try {
+      const db = await openDB();
+      const transaction = db.transaction([storeName], 'readwrite');
+      const store = transaction.objectStore(storeName);
+      
+      // Clear existing data
+      await store.clear();
+      
+      // Save each item individually
+      for (const item of dataArray) {
+        if (item && typeof item === 'object' && item.id) {
+          await store.put(item);
+        }
+      }
+      
+      // Also save to localStorage as fallback
+      localStorage.setItem(storeName, JSON.stringify(dataArray));
+      
+    } catch (error) {
+      console.error('Error saving offline collection:', error);
+      // Fallback to localStorage only
+      localStorage.setItem(storeName, JSON.stringify(dataArray));
+    }
+  };
+
+  // Legacy function for backward compatibility - now handles single items only
+  const saveOfflineData = async (storeName: string, data: any) => {
+    if (Array.isArray(data)) {
+      console.warn('saveOfflineData called with array, use saveOfflineCollection instead');
+      return saveOfflineCollection(storeName, data);
+    }
+    return saveOfflineItem(storeName, data);
   };
 
   const getOfflineData = async (storeName: string): Promise<any[]> => {
@@ -132,7 +166,7 @@ export const useOfflineSync = () => {
   };
 
   const addToPendingSync = async (data: OfflineData) => {
-    await saveOfflineData('pendingSync', data);
+    await saveOfflineItem('pendingSync', data);
     setPendingSync(prev => [...prev, data]);
   };
 
@@ -140,6 +174,8 @@ export const useOfflineSync = () => {
     isOnline,
     pendingSync,
     saveOfflineData,
+    saveOfflineItem,
+    saveOfflineCollection,
     getOfflineData,
     addToPendingSync,
     syncPendingData

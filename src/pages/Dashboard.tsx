@@ -42,7 +42,7 @@ const Dashboard = () => {
   const [dataLoaded, setDataLoaded] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { isOnline, saveOfflineData, getOfflineData } = useOfflineSync();
+  const { isOnline, saveOfflineCollection, getOfflineData } = useOfflineSync();
 
   // Memoize the data loading function to prevent recreating it on every render
   const loadData = useCallback(async () => {
@@ -100,16 +100,16 @@ const Dashboard = () => {
   useEffect(() => {
     if (dataLoaded && licenses.length > 0) {
       console.log('Saving licenses to offline storage...');
-      saveOfflineData('licenses', licenses).catch(console.error);
+      saveOfflineCollection('licenses', licenses).catch(console.error);
     }
-  }, [licenses, saveOfflineData, dataLoaded]);
+  }, [licenses, saveOfflineCollection, dataLoaded]);
 
   useEffect(() => {
     if (dataLoaded && reminders.length > 0) {
       console.log('Saving reminders to offline storage...');
-      saveOfflineData('reminders', reminders).catch(console.error);
+      saveOfflineCollection('reminders', reminders).catch(console.error);
     }
-  }, [reminders, saveOfflineData, dataLoaded]);
+  }, [reminders, saveOfflineCollection, dataLoaded]);
 
   const handleLogout = () => {
     localStorage.removeItem('user');
