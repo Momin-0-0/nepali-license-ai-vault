@@ -3,7 +3,7 @@ export interface ValidationResult {
   errors: string[];
 }
 
-export const validateLicenseNumber = (licenseNumber: string): ValidationResult => {
+export const validateNepalLicenseNumber = (licenseNumber: string): ValidationResult => {
   const errors: string[] = [];
   
   if (!licenseNumber || licenseNumber.trim().length === 0) {
@@ -13,15 +13,26 @@ export const validateLicenseNumber = (licenseNumber: string): ValidationResult =
 
   // Nepal license number patterns
   const nepalPatterns = [
-    /^NP-\d{2}-\d{3}-\d{3}$/i, // NP-12-345-678
-    /^\d{10,15}$/, // Numeric only
-    /^[A-Z]{2}-\d{2}-\d{4}-\d{7}$/i // State-based format
+    /^\d{2}-\d{2}-\d{9}$/i, // XX-XX-XXXXXXXXX (standard Nepal format)
+    /^\d{2}-\d{2}-\d{8}$/i, // XX-XX-XXXXXXXX (alternative format)
+    /^\d{2}-\d{2}-\d{7}$/i, // XX-XX-XXXXXXX (older format)
+    /^\d{11,13}$/, // Numeric only (11-13 digits)
   ];
 
-  const isValidFormat = nepalPatterns.some(pattern => pattern.test(licenseNumber.trim()));
+  const cleanedNumber = licenseNumber.trim().replace(/\s+/g, '');
+  const isValidFormat = nepalPatterns.some(pattern => pattern.test(cleanedNumber));
   
   if (!isValidFormat) {
-    errors.push('Invalid license number format. Expected formats: NP-12-345-678 or 10-15 digit number');
+    errors.push('Invalid Nepal license number format. Expected formats: XX-XX-XXXXXXXXX or 11-13 digit number');
+  }
+
+  // Additional validation for Nepal context
+  if (cleanedNumber.length < 9) {
+    errors.push('Nepal license number must be at least 9 characters');
+  }
+
+  if (cleanedNumber.length > 15) {
+    errors.push('Nepal license number must not exceed 15 characters');
   }
 
   return { isValid: errors.length === 0, errors };
@@ -70,6 +81,42 @@ export const validateExpiryDate = (issueDate: string, expiryDate: string): Valid
     errors.push('License validity period seems too long (over 50 years)');
   }
 
+  // Nepal licenses typically valid for 5-10 years
+  if (yearsDiff > 15) {
+    errors.push('Nepal licenses are typically valid for 5-10 years. Please verify the dates.');
+  }
+
+  return { isValid: errors.length === 0, errors };
+};
+
+export const validateNepalName = (name: string): ValidationResult => {
+  const errors: string[] = [];
+  
+  if (!name || name.trim().length === 0) {
+    return { isValid: true, errors }; // Name is optional
+  }
+
+  const trimmedName = name.trim();
+  
+  if (trimmedName.length < 2) {
+    errors.push('Name must be at least 2 characters');
+  }
+
+  if (trimmedName.length > 100) {
+    errors.push('Name must not exceed 100 characters');
+  }
+
+  // Allow Nepal-specific characters and patterns
+  if (!/^[a-zA-Z\s.'-]+$/.test(trimmedName)) {
+    errors.push('Name can only contain letters, spaces, dots, hyphens, and apostrophes');
+  }
+
+  // Check for common Nepal name patterns
+  const words = trimmedName.split(' ').filter(word => word.length > 0);
+  if (words.length < 2) {
+    errors.push('Please provide both first and last name');
+  }
+
   return { isValid: errors.length === 0, errors };
 };
 
@@ -95,5 +142,24 @@ export const validateImageFile = (file: File): ValidationResult => {
     errors.push('Only JPEG, PNG, and WebP images are allowed');
   }
 
+  // Check minimum file size (to avoid empty files)
+  if (file.size < 1024) {
+    errors.push('Image file seems too small. Please select a valid image.');
+  }
+
   return { isValid: errors.length === 0, errors };
 };
+
+export const formatNepalLicenseNumber = (licenseNumber: string): string => {
+  const cleaned = licenseNumber.replace(/[-\s]/g, '');
+  
+  // Format as Nepal standard if it's a long number
+  if (cleaned.length >= 11 && /^\d+$/.test(cleaned)) {
+    return `${cleaned.substring(0, 2)}-${cleaned.substring(2, 4)}-${cleaned.substring(4)}`;
+  }
+  
+  return licenseNumber;
+};
+
+// Legacy function for backward compatibility
+export const validateLicenseNumber = validateNepalLicenseNumber;

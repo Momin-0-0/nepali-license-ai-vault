@@ -1,7 +1,7 @@
 import { useRef, useState } from 'react';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Camera, FileText, Loader2, Check, UploadIcon, ZoomIn, ZoomOut, RotateCcw } from "lucide-react";
+import { Camera, FileText, Loader2, Check, UploadIcon, ZoomIn, ZoomOut, RotateCcw, Info } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { processImageWithOCR } from '@/utils/ocrUtils';
 import { LicenseData } from '@/types/license';
@@ -67,7 +67,7 @@ const ImageUpload = ({ onDataExtracted, onImageUploaded }: ImageUploadProps) => 
       if (Object.keys(extractedData).length > 0) {
         toast({
           title: "OCR Complete",
-          description: "License information extracted. Please review and edit if needed.",
+          description: "Nepal license information extracted. Please review and edit if needed.",
         });
       } else {
         toast({
@@ -138,13 +138,30 @@ const ImageUpload = ({ onDataExtracted, onImageUploaded }: ImageUploadProps) => 
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <Camera className="w-5 h-5" />
-          Upload License Image
+          Upload Nepal License Image
         </CardTitle>
         <CardDescription>
-          Take a photo or upload an image of your driving license for automatic data extraction
+          Take a photo or upload an image of your Nepal driving license for automatic data extraction
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
+        {/* Nepal License Tips */}
+        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+          <div className="flex items-start gap-3">
+            <Info className="w-5 h-5 text-blue-600 mt-0.5" />
+            <div className="text-sm text-blue-700">
+              <p className="font-medium mb-2">Tips for better OCR results with Nepal licenses:</p>
+              <ul className="list-disc list-inside space-y-1 text-xs">
+                <li>Ensure good lighting and avoid shadows</li>
+                <li>Keep the license flat and straight</li>
+                <li>Make sure all text is clearly visible</li>
+                <li>Avoid glare from the plastic surface</li>
+                <li>Include the entire license in the frame</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+
         <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center">
           {imagePreview ? (
             <div className="space-y-4">
@@ -159,7 +176,7 @@ const ImageUpload = ({ onDataExtracted, onImageUploaded }: ImageUploadProps) => 
                 <img 
                   ref={imageRef}
                   src={imagePreview} 
-                  alt="License preview" 
+                  alt="Nepal license preview" 
                   className="object-contain transition-transform duration-200 select-none"
                   style={{ 
                     transform: `scale(${zoomLevel}) translate(${imagePosition.x / zoomLevel}px, ${imagePosition.y / zoomLevel}px)`,
@@ -214,9 +231,9 @@ const ImageUpload = ({ onDataExtracted, onImageUploaded }: ImageUploadProps) => 
                   Change Image
                 </Button>
                 {!ocrComplete && !isProcessing && (
-                  <Button onClick={processImage}>
+                  <Button onClick={processImage} className="bg-gradient-to-r from-blue-600 to-green-600 hover:from-blue-700 hover:to-green-700">
                     <FileText className="w-4 h-4 mr-2" />
-                    Extract Data
+                    Extract Nepal License Data
                   </Button>
                 )}
               </div>
@@ -229,10 +246,11 @@ const ImageUpload = ({ onDataExtracted, onImageUploaded }: ImageUploadProps) => 
             <div className="space-y-4">
               <UploadIcon className="w-16 h-16 text-gray-400 mx-auto" />
               <div>
-                <p className="text-lg font-medium text-gray-700">Upload your license image</p>
+                <p className="text-lg font-medium text-gray-700">Upload your Nepal license image</p>
                 <p className="text-sm text-gray-500">PNG, JPG, WebP up to 10MB</p>
+                <p className="text-xs text-gray-400 mt-2">Optimized for Nepal driving license format</p>
               </div>
-              <Button onClick={() => fileInputRef.current?.click()}>
+              <Button onClick={() => fileInputRef.current?.click()} className="bg-gradient-to-r from-blue-600 to-green-600 hover:from-blue-700 hover:to-green-700">
                 Choose File
               </Button>
             </div>
@@ -253,6 +271,9 @@ const ImageUpload = ({ onDataExtracted, onImageUploaded }: ImageUploadProps) => 
               <Loader2 className="w-5 h-5 animate-spin text-blue-600" />
               <span className="text-blue-700 font-medium">{processingStep}</span>
             </div>
+            <div className="mt-2 text-xs text-blue-600">
+              Processing Nepal license with enhanced OCR algorithm...
+            </div>
           </div>
         )}
 
@@ -260,7 +281,10 @@ const ImageUpload = ({ onDataExtracted, onImageUploaded }: ImageUploadProps) => 
           <div className="bg-green-50 border border-green-200 rounded-lg p-4">
             <div className="flex items-center gap-3">
               <Check className="w-5 h-5 text-green-600" />
-              <span className="text-green-700 font-medium">Data extracted successfully!</span>
+              <span className="text-green-700 font-medium">Nepal license data extracted successfully!</span>
+            </div>
+            <div className="mt-2 text-xs text-green-600">
+              Please review the extracted information and make any necessary corrections.
             </div>
           </div>
         )}
