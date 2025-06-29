@@ -1,11 +1,13 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Play, RotateCcw } from 'lucide-react';
+import { Play, RotateCcw, ArrowLeft } from 'lucide-react';
 import LoadingPage from '@/components/LoadingPage';
 
 const LoadingDemo = () => {
   const [showLoading, setShowLoading] = useState(false);
+  const navigate = useNavigate();
 
   const startDemo = () => {
     setShowLoading(true);
@@ -19,6 +21,10 @@ const LoadingDemo = () => {
     setShowLoading(false);
   };
 
+  const goBack = () => {
+    navigate('/');
+  };
+
   if (showLoading) {
     return (
       <LoadingPage 
@@ -30,6 +36,16 @@ const LoadingDemo = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-red-50 flex items-center justify-center p-4">
+      {/* Back Button */}
+      <Button 
+        onClick={goBack}
+        variant="ghost" 
+        className="absolute top-4 left-4 hover:bg-white/80"
+      >
+        <ArrowLeft className="w-4 h-4 mr-2" />
+        Back to Home
+      </Button>
+
       <Card className="max-w-md w-full shadow-xl">
         <CardHeader className="text-center">
           <div className="w-16 h-16 rounded-2xl flex items-center justify-center shadow-lg mx-auto mb-4 overflow-hidden">
