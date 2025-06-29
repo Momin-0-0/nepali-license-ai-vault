@@ -32,6 +32,8 @@ interface License {
   expiryDate: string;
   issuingAuthority: string;
   createdAt: string;
+  holderName?: string;
+  address?: string;
 }
 
 interface AnalyticsDashboardProps {
@@ -40,19 +42,33 @@ interface AnalyticsDashboardProps {
 }
 
 const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({ 
-  licenses, 
-  sharedLinks 
+  licenses = [], 
+  sharedLinks = [] 
 }) => {
   const analytics = useMemo(() => {
     const now = new Date();
     
+    // Ensure licenses is an array and has valid data
+    const validLicenses = Array.isArray(licenses) ? licenses.filter(license => 
+      license && 
+      typeof license === 'object' && 
+      license.expiryDate && 
+      license.issueDate &&
+      license.createdAt
+    ) : [];
+    
     // License status distribution
-    const statusData = licenses.reduce((acc, license) => {
-      const daysLeft = differenceInDays(parseISO(license.expiryDate), now);
-      
-      if (daysLeft < 0) acc.expired++;
-      else if (daysLeft <= 30) acc.expiring++;
-      else acc.valid++;
+    const statusData = validLicenses.reduce((acc, license) => {
+      try {
+        const daysLeft = differenceInDays(parseISO(license.expiryDate), now);
+        
+        if (daysLeft < 0) acc.expired++;
+        else if (daysLeft <= 30) acc.expiring++;
+        else acc.valid++;
+      } catch (error) {
+        console.warn('Invalid date in license:', license.id, error);
+        // Skip invalid dates
+      }
       
       return acc;
     }, { valid: 0, expiring: 0, expired: 0 });
@@ -61,44 +77,68 @@ const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({
     const monthlyData = Array.from({ length: 6 }, (_, i) => {
       const month = subMonths(now, 5 - i);
       const monthStr = format(month, 'MMM yyyy');
-      const count = licenses.filter(license => {
-        const createdDate = parseISO(license.createdAt);
-        return format(createdDate, 'MMM yyyy') === monthStr;
+      const count = validLicenses.filter(license => {
+        try {
+          const createdDate = parseISO(license.createdAt);
+          return format(createdDate, 'MMM yyyy') === monthStr;
+        } catch (error) {
+          console.warn('Invalid createdAt date in license:', license.id, error);
+          return false;
+        }
       }).length;
       
       return { month: format(month, 'MMM'), count };
     });
 
     // Authority distribution
-    const authorityData = licenses.reduce((acc, license) => {
-      const authority = license.issuingAuthority;
+    const authorityData = validLicenses.reduce((acc, license) => {
+      const authority = license.issuingAuthority || 'Unknown Authority';
       acc[authority] = (acc[authority] || 0) + 1;
       return acc;
     }, {} as Record<string, number>);
 
-    // Sharing activity
+    // Sharing activity - ensure sharedLinks is an array
+    const validSharedLinks = Array.isArray(sharedLinks) ? sharedLinks.filter(link => 
+      link && typeof link === 'object'
+    ) : [];
+
     const sharingData = {
-      totalShares: sharedLinks.length,
-      activeShares: sharedLinks.filter(link => 
-        new Date(link.expiresAt) > now
-      ).length,
-      totalViews: sharedLinks.reduce((sum, link) => 
-        sum + (link.accessCount || 0), 0
+      totalShares: validSharedLinks.length,
+      activeShares: validSharedLinks.filter(link => {
+        try {
+          return link.expiresAt && new Date(link.expiresAt) > now;
+        } catch (error) {
+          console.warn('Invalid expiresAt date in shared link:', link.id, error);
+          return false;
+        }
+      }).length,
+      totalViews: validSharedLinks.reduce((sum, link) => 
+        sum + (typeof link.accessCount === 'number' ? link.accessCount : 0), 0
       )
     };
+
+    // Calculate average validity years safely
+    let averageValidityYears = 0;
+    if (validLicenses.length > 0) {
+      const totalYears = validLicenses.reduce((sum, license) => {
+        try {
+          const years = differenceInDays(parseISO(license.expiryDate), parseISO(license.issueDate)) / 365;
+          return sum + (isNaN(years) ? 0 : years);
+        } catch (error) {
+          console.warn('Error calculating validity years for license:', license.id, error);
+          return sum;
+        }
+      }, 0);
+      averageValidityYears = totalYears / validLicenses.length;
+    }
 
     return {
       statusData,
       monthlyData,
       authorityData: Object.entries(authorityData).map(([name, value]) => ({ name, value })),
       sharingData,
-      totalLicenses: licenses.length,
-      averageValidityYears: licenses.length > 0 
-        ? licenses.reduce((sum, license) => {
-            const years = differenceInDays(parseISO(license.expiryDate), parseISO(license.issueDate)) / 365;
-            return sum + years;
-          }, 0) / licenses.length
-        : 0
+      totalLicenses: validLicenses.length,
+      averageValidityYears
     };
   }, [licenses, sharedLinks]);
 
@@ -109,6 +149,28 @@ const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({
     { name: 'Expiring Soon', value: analytics.statusData.expiring, color: '#F59E0B' },
     { name: 'Expired', value: analytics.statusData.expired, color: '#EF4444' }
   ].filter(item => item.value > 0);
+
+  // Show empty state if no valid data
+  if (analytics.totalLicenses === 0) {
+    return (
+      <div className="space-y-6">
+        <Card>
+          <CardContent className="p-12 text-center">
+            <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+              <BarChart className="w-8 h-8 text-gray-400" />
+            </div>
+            <h3 className="text-lg font-semibold text-gray-900 mb-2">No Analytics Data</h3>
+            <p className="text-gray-600 mb-6">
+              Upload some licenses to see detailed analytics and insights about your license management.
+            </p>
+            <Badge variant="outline" className="text-gray-500">
+              Analytics will appear here once you have license data
+            </Badge>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -141,7 +203,7 @@ const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({
             </div>
             <div className="flex items-center mt-2">
               <Badge variant="outline" className="text-green-600 border-green-200">
-                {((analytics.statusData.valid / analytics.totalLicenses) * 100).toFixed(1)}%
+                {analytics.totalLicenses > 0 ? ((analytics.statusData.valid / analytics.totalLicenses) * 100).toFixed(1) : 0}%
               </Badge>
             </div>
           </CardContent>
@@ -185,32 +247,34 @@ const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({
       {/* Charts */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* License Status Distribution */}
-        <Card>
-          <CardHeader>
-            <CardTitle>License Status Distribution</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <ResponsiveContainer width="100%" height={300}>
-              <PieChart>
-                <Pie
-                  data={pieData}
-                  cx="50%"
-                  cy="50%"
-                  labelLine={false}
-                  label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
-                  outerRadius={80}
-                  fill="#8884d8"
-                  dataKey="value"
-                >
-                  {pieData.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={entry.color} />
-                  ))}
-                </Pie>
-                <Tooltip />
-              </PieChart>
-            </ResponsiveContainer>
-          </CardContent>
-        </Card>
+        {pieData.length > 0 && (
+          <Card>
+            <CardHeader>
+              <CardTitle>License Status Distribution</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <ResponsiveContainer width="100%" height={300}>
+                <PieChart>
+                  <Pie
+                    data={pieData}
+                    cx="50%"
+                    cy="50%"
+                    labelLine={false}
+                    label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                    outerRadius={80}
+                    fill="#8884d8"
+                    dataKey="value"
+                  >
+                    {pieData.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={entry.color} />
+                    ))}
+                  </Pie>
+                  <Tooltip />
+                </PieChart>
+              </ResponsiveContainer>
+            </CardContent>
+          </Card>
+        )}
 
         {/* Monthly License Additions */}
         <Card>
@@ -290,6 +354,18 @@ const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({
                 <p className="font-medium text-blue-800">License Validity</p>
                 <p className="text-sm text-blue-700">
                   Your licenses have an average validity of {analytics.averageValidityYears.toFixed(1)} years.
+                </p>
+              </div>
+            </div>
+          )}
+
+          {analytics.totalLicenses > 0 && analytics.statusData.valid === analytics.totalLicenses && (
+            <div className="flex items-start gap-3 p-3 bg-green-50 rounded-lg">
+              <CheckCircle className="w-5 h-5 text-green-600 mt-0.5" />
+              <div>
+                <p className="font-medium text-green-800">All Licenses Valid</p>
+                <p className="text-sm text-green-700">
+                  Great job! All your licenses are currently valid and up to date.
                 </p>
               </div>
             </div>
