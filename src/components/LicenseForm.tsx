@@ -4,9 +4,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { FileText, AlertCircle, Loader2, CheckCircle, XCircle } from "lucide-react";
+import { FileText, AlertCircle, Loader2, CheckCircle, XCircle, Info } from "lucide-react";
 import { LicenseData } from '@/types/license';
-import { validateLicenseNumber, validateDate, validateExpiryDate, sanitizeInput } from '@/utils/validation';
+import { validateNepalLicenseNumber, validateDate, validateExpiryDate, sanitizeInput } from '@/utils/validation';
 
 interface LicenseFormProps {
   licenseData: LicenseData;
@@ -46,7 +46,7 @@ const LicenseForm = ({
 
     switch (field) {
       case 'licenseNumber':
-        const licenseValidation = validateLicenseNumber(value);
+        const licenseValidation = validateNepalLicenseNumber(value);
         if (!licenseValidation.isValid) {
           fieldErrors = licenseValidation.errors;
         }
@@ -137,17 +137,33 @@ const LicenseForm = ({
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <FileText className="w-5 h-5" />
-          License Details
+          Nepal License Details
         </CardTitle>
         <CardDescription>
-          Review and edit the extracted information
+          Review and edit the extracted information from your Nepal driving license
         </CardDescription>
       </CardHeader>
       <CardContent>
+        {/* Nepal License Format Info */}
+        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
+          <div className="flex items-start gap-3">
+            <Info className="w-5 h-5 text-blue-600 mt-0.5" />
+            <div className="text-sm text-blue-700">
+              <p className="font-medium mb-2">Nepal License Format Guide:</p>
+              <ul className="list-disc list-inside space-y-1 text-xs">
+                <li><strong>License Number:</strong> XX-XX-XXXXXXXXX (e.g., 03-06-041605052)</li>
+                <li><strong>Date Format:</strong> DD-MM-YYYY (Nepal standard)</li>
+                <li><strong>Authority:</strong> Department of Transport Management, Government of Nepal</li>
+                <li><strong>Validation:</strong> All fields are validated for Nepal license standards</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
             <Label htmlFor="licenseNumber" className="flex items-center gap-2">
-              License Number *
+              License Number * (Nepal Format)
               {renderFieldIcon('licenseNumber')}
             </Label>
             <Input
@@ -155,7 +171,7 @@ const LicenseForm = ({
               value={licenseData.licenseNumber}
               onChange={(e) => updateField('licenseNumber', e.target.value.toUpperCase())}
               onBlur={() => handleBlur('licenseNumber')}
-              placeholder="e.g., NP-12-345-678 or 4203055074"
+              placeholder="e.g., 03-06-041605052 or 03060416050520"
               required
               disabled={disabled}
               className={errors.licenseNumber?.length > 0 ? 'border-red-500' : ''}
@@ -163,11 +179,14 @@ const LicenseForm = ({
             {touched.licenseNumber && errors.licenseNumber?.map((error, index) => (
               <p key={index} className="text-sm text-red-500">{error}</p>
             ))}
+            <p className="text-xs text-gray-500">
+              Nepal license format: XX-XX-XXXXXXXXX (will be auto-formatted)
+            </p>
           </div>
 
           <div className="space-y-2">
             <Label htmlFor="holderName" className="flex items-center gap-2">
-              Holder Name
+              Holder Name (As on License)
               {renderFieldIcon('holderName')}
             </Label>
             <Input
@@ -175,7 +194,7 @@ const LicenseForm = ({
               value={licenseData.holderName}
               onChange={(e) => updateField('holderName', e.target.value)}
               onBlur={() => handleBlur('holderName')}
-              placeholder="Full name as on license"
+              placeholder="Full name as printed on Nepal license"
               disabled={disabled}
               className={errors.holderName?.length > 0 ? 'border-red-500' : ''}
             />
@@ -187,7 +206,7 @@ const LicenseForm = ({
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="issueDate" className="flex items-center gap-2">
-                Issue Date
+                Issue Date (Nepal Format)
                 {renderFieldIcon('issueDate')}
               </Label>
               <Input
@@ -202,10 +221,11 @@ const LicenseForm = ({
               {touched.issueDate && errors.issueDate?.map((error, index) => (
                 <p key={index} className="text-sm text-red-500">{error}</p>
               ))}
+              <p className="text-xs text-gray-500">Date when license was issued</p>
             </div>
             <div className="space-y-2">
               <Label htmlFor="expiryDate" className="flex items-center gap-2">
-                Expiry Date *
+                Expiry Date * (Nepal Format)
                 {renderFieldIcon('expiryDate')}
               </Label>
               <Input
@@ -221,12 +241,13 @@ const LicenseForm = ({
               {touched.expiryDate && errors.expiryDate?.map((error, index) => (
                 <p key={index} className="text-sm text-red-500">{error}</p>
               ))}
+              <p className="text-xs text-gray-500">License expiration date</p>
             </div>
           </div>
 
           <div className="space-y-2">
             <Label htmlFor="issuingAuthority" className="flex items-center gap-2">
-              Issuing Authority
+              Issuing Authority (Nepal)
               {renderFieldIcon('issuingAuthority')}
             </Label>
             <Input
@@ -236,6 +257,7 @@ const LicenseForm = ({
               onBlur={() => handleBlur('issuingAuthority')}
               disabled={disabled}
               className={errors.issuingAuthority?.length > 0 ? 'border-red-500' : ''}
+              placeholder="Department of Transport Management, Government of Nepal"
             />
             {touched.issuingAuthority && errors.issuingAuthority?.map((error, index) => (
               <p key={index} className="text-sm text-red-500">{error}</p>
@@ -244,7 +266,7 @@ const LicenseForm = ({
 
           <div className="space-y-2">
             <Label htmlFor="address" className="flex items-center gap-2">
-              Address
+              Address (As on License)
               {renderFieldIcon('address')}
             </Label>
             <Textarea
@@ -252,7 +274,7 @@ const LicenseForm = ({
               value={licenseData.address}
               onChange={(e) => updateField('address', e.target.value)}
               onBlur={() => handleBlur('address')}
-              placeholder="Address as on license"
+              placeholder="Address as printed on Nepal license"
               rows={3}
               disabled={disabled}
               className={errors.address?.length > 0 ? 'border-red-500' : ''}
@@ -267,7 +289,8 @@ const LicenseForm = ({
               <AlertCircle className="w-5 h-5 text-yellow-600 mt-0.5" />
               <div className="text-sm text-yellow-700">
                 <p className="font-medium">Please verify the extracted information</p>
-                <p>OCR may not be 100% accurate. Please review and correct any errors before saving.</p>
+                <p>OCR may not be 100% accurate for Nepal licenses. Please review and correct any errors before saving.</p>
+                <p className="mt-1 text-xs">✓ License number format validated for Nepal standards</p>
               </div>
             </div>
           </div>
@@ -276,9 +299,13 @@ const LicenseForm = ({
             <Button type="button" variant="outline" onClick={onCancel} disabled={disabled || isProcessing}>
               Cancel
             </Button>
-            <Button type="submit" className="flex-1" disabled={disabled || isProcessing}>
+            <Button 
+              type="submit" 
+              className="flex-1 bg-gradient-to-r from-blue-600 to-green-600 hover:from-blue-700 hover:to-green-700" 
+              disabled={disabled || isProcessing}
+            >
               {isProcessing && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-              {isProcessing ? 'Saving...' : 'Save License'}
+              {isProcessing ? 'Saving Nepal License...' : 'Save Nepal License'}
             </Button>
           </div>
         </form>

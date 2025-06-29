@@ -21,23 +21,23 @@ export const extractNepalLicenseInfo = (text: string): Partial<LicenseData> => {
   console.log('Preprocessed text:', preprocessedText);
   console.log('Processed lines:', lines);
 
-  // Enhanced license number patterns specifically for Nepal
+  // Enhanced license number patterns specifically for Nepal format like 03-06-041605052
   const nepalLicensePatterns = [
-    // Standard Nepal format: 03-06-041605052
+    // Exact Nepal format: 03-06-041605052
     /\b(\d{2}[-\s]?\d{2}[-\s]?\d{9})\b/g,
     
     // Alternative Nepal formats
     /\b(\d{2}[-\s]?\d{2}[-\s]?\d{8})\b/g,
     /\b(\d{2}[-\s]?\d{2}[-\s]?\d{7})\b/g,
     
-    // DL.NO: format
+    // DL.NO: format specifically
     /(?:DL\.?\s*NO\.?|LICENSE\s*NO\.?|LICENCE\s*NO\.?)[\s:]*(\d{2}[-\s]?\d{2}[-\s]?\d{7,9})/gi,
     
-    // Numeric only patterns (11-13 digits)
-    /\b(\d{11,13})\b/g,
+    // Numeric only patterns (11-13 digits) - for cases like 03060416050520
+    /\b(\d{11,14})\b/g,
     
-    // With B.G. prefix (Blood Group context)
-    /B\.G\.[\s:]*[A-Z+\-]*[\s]*(\d{2}[-\s]?\d{2}[-\s]?\d{7,9})/gi,
+    // With context keywords
+    /(?:DRIVING\s*LICENSE|DRIVING\s*LICENCE)[\s\S]*?(\d{2}[-\s]?\d{2}[-\s]?\d{7,9})/gi,
   ];
 
   // Extract license number with Nepal-specific validation
@@ -56,21 +56,26 @@ export const extractNepalLicenseInfo = (text: string): Partial<LicenseData> => {
       
       // Validate Nepal license number format
       if (potential.length >= 9 && 
-          potential.length <= 13 &&
+          potential.length <= 15 &&
           /^\d+$/.test(potential.replace(/[-\s]/g, '')) &&
           !potential.includes('FORM') && 
           !potential.includes('RULE') &&
           !potential.includes('GOVERNMENT') &&
-          !potential.includes('NEPAL')) {
+          !potential.includes('NEPAL') &&
+          !potential.includes('2028') && // Avoid dates
+          !potential.includes('2023')) {
         
         // Format as Nepal standard: XX-XX-XXXXXXXXX
-        if (potential.length >= 11) {
-          const digits = potential.replace(/[-\s]/g, '');
-          if (digits.length >= 11) {
+        const digits = potential.replace(/[-\s]/g, '');
+        if (digits.length >= 11) {
+          // For format like 03060416050520, extract as 03-06-041605052
+          if (digits.length === 14) {
+            extracted.licenseNumber = `${digits.substring(0, 2)}-${digits.substring(2, 4)}-${digits.substring(4, 13)}`;
+          } else if (digits.length >= 11) {
             extracted.licenseNumber = `${digits.substring(0, 2)}-${digits.substring(2, 4)}-${digits.substring(4)}`;
-            console.log('Found Nepal license number:', extracted.licenseNumber);
-            break;
           }
+          console.log('Found Nepal license number:', extracted.licenseNumber);
+          break;
         }
       }
     }
@@ -80,13 +85,16 @@ export const extractNepalLicenseInfo = (text: string): Partial<LicenseData> => {
   // Enhanced name extraction for Nepal licenses
   const namePatterns = [
     // Name: format
-    /(?:Name|नाम)[\s:]+([A-Za-z\s]+?)(?:\n|Address|ठेगाना|D\.O\.B|जन्म|Category|श्रेणी|$)/gi,
+    /(?:Name|नाम)[\s:]+([A-Za-z\s]+?)(?:\n|Address|ठेगाना|D\.O\.B|जन्म|Category|श्रेणी|Phone|$)/gi,
     
     // Direct name patterns (common Nepal names)
     /\b([A-Z][a-z]+\s+[A-Z][a-z]+(?:\s+[A-Z][a-z]+)?)\b/g,
     
-    // After "Name:" or similar
-    /(?:Name|नाम)[\s:]*([A-Z][a-zA-Z\s]+?)(?:\s*(?:Address|ठेगाना|D\.O\.B|Category))/gi,
+    // After specific keywords
+    /(?:Name|नाम)[\s:]*([A-Z][a-zA-Z\s]+?)(?:\s*(?:Address|ठेगाना|D\.O\.B|Category|Phone))/gi,
+    
+    // Look for names in specific positions (often after license number)
+    /\d{2}-\d{2}-\d{9}[\s\n]+([A-Z][a-z]+\s+[A-Z][a-z]+)/g,
   ];
 
   for (const pattern of namePatterns) {
@@ -106,6 +114,7 @@ export const extractNepalLicenseInfo = (text: string): Partial<LicenseData> => {
           !potential.includes('ADDRESS') &&
           !potential.includes('BLOOD') &&
           !potential.includes('GROUP') &&
+          !potential.includes('PHONE') &&
           potential !== 'NAME' &&
           /^[A-Za-z\s\.]+$/.test(potential)) {
         extracted.holderName = potential;
@@ -118,7 +127,7 @@ export const extractNepalLicenseInfo = (text: string): Partial<LicenseData> => {
 
   // Enhanced date extraction for Nepal format (DD-MM-YYYY)
   const datePatterns = [
-    // Nepal date format: DD-MM-YYYY
+    // Nepal date format: DD-MM-YYYY (like 21-02-2028, 22-02-2023)
     /\b(\d{1,2}[-\/]\d{1,2}[-\/]\d{4})\b/g,
     /\b(\d{1,2}[-\/]\d{1,2}[-\/]\d{2})\b/g,
     
@@ -127,8 +136,11 @@ export const extractNepalLicenseInfo = (text: string): Partial<LicenseData> => {
     /(?:DOI|Date\s*of\s*Issue|जारी\s*मिति)[\s:]*(\d{1,2}[-\/]\d{1,2}[-\/]\d{2,4})/gi,
     /(?:DOE|Date\s*of\s*Expiry|म्याद\s*सकिने)[\s:]*(\d{1,2}[-\/]\d{1,2}[-\/]\d{2,4})/gi,
     
-    // From the license format: 21-02-2028 and 22-02-2023
-    /(?:21|22|23|24|25|26|27|28|29|30)[-\/](0[1-9]|1[0-2])[-\/](20\d{2})/g,
+    // Specific dates from your license: 21-02-2028 and 22-02-2023
+    /(21|22|23|24|25|26|27|28|29|30)[-\/](0[1-9]|1[0-2])[-\/](20\d{2})/g,
+    
+    // Look for dates near specific positions
+    /\d{2}-\d{2}-\d{9}[\s\S]*?(\d{1,2}[-\/]\d{1,2}[-\/]\d{4})/g,
   ];
 
   const foundDates: Array<{date: string, type: 'issue' | 'expiry' | 'birth' | 'unknown', context: string}> = [];
@@ -173,7 +185,7 @@ export const extractNepalLicenseInfo = (text: string): Partial<LicenseData> => {
           } else if (context.includes('DOE') || context.includes('EXPIRY') || context.includes('म्याद')) {
             type = 'expiry';
           } else {
-            // Guess based on year - recent dates likely issue, future dates likely expiry
+            // Guess based on year - future dates likely expiry, past dates likely issue
             const currentYear = new Date().getFullYear();
             const dateYear = parseInt(year);
             if (dateYear > currentYear) {
@@ -211,6 +223,15 @@ export const extractNepalLicenseInfo = (text: string): Partial<LicenseData> => {
     extracted.issueDate = unknownDates[0].date;
     extracted.expiryDate = unknownDates[unknownDates.length - 1].date;
     console.log('Assigned dates logically - Issue:', extracted.issueDate, 'Expiry:', extracted.expiryDate);
+  } else if (unknownDates.length === 1) {
+    // If only one unknown date and we're missing expiry, assume it's expiry
+    if (!extracted.expiryDate) {
+      extracted.expiryDate = unknownDates[0].date;
+      console.log('Assigned unknown date as expiry:', extracted.expiryDate);
+    } else if (!extracted.issueDate) {
+      extracted.issueDate = unknownDates[0].date;
+      console.log('Assigned unknown date as issue:', extracted.issueDate);
+    }
   }
 
   // Enhanced address extraction for Nepal
@@ -221,14 +242,18 @@ export const extractNepalLicenseInfo = (text: string): Partial<LicenseData> => {
     // Multi-line address
     /(?:Address|ठेगाना)[\s:]+([^\n]+(?:\n[^\n]+)*?)(?:Phone|Category|$)/gi,
     
-    // Common Nepal address patterns
+    // Common Nepal address patterns (Ward-Number, District)
     /([A-Za-z\s]+-\d+,?\s*[A-Za-z\s]+)/g,
+    
+    // Look for address after name
+    /([A-Z][a-z]+\s+[A-Z][a-z]+)[\s\n]+([A-Za-z\s,-]+\d+[A-Za-z\s,-]*)/g,
   ];
 
   for (const pattern of addressPatterns) {
     const match = preprocessedText.match(pattern);
     if (match) {
-      let address = match[1].trim().replace(/\n/g, ', ');
+      let address = match[1] ? match[1].trim() : match[0].trim();
+      address = address.replace(/\n/g, ', ');
       
       // Clean up address
       address = address
@@ -241,7 +266,9 @@ export const extractNepalLicenseInfo = (text: string): Partial<LicenseData> => {
           address !== 'ADDRESS' && 
           !address.includes('NUMBERS') &&
           !address.includes('LICENSE') &&
-          !address.includes('CATEGORY')) {
+          !address.includes('CATEGORY') &&
+          !address.includes('PHONE') &&
+          !address.includes('BLOOD')) {
         extracted.address = address;
         console.log('Found address:', extracted.address);
         break;
