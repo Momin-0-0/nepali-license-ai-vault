@@ -140,7 +140,7 @@ const Dashboard = () => {
           <QuickActionCard
             title="Upload License"
             description="Add a new license"
-            icon={Upload}
+            icon={Plus}
             onClick={() => navigate('/upload')}
             variant="primary"
           />

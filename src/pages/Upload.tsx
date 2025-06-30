@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from "@/components/ui/button";
@@ -8,7 +9,7 @@ import { useOfflineSync } from "@/hooks/useOfflineSync";
 import { useLocalStorage } from "@/hooks/useLocalStorage";
 import { processImageWithOCR } from "@/utils/ocrUtils";
 import { validateLicenseData } from "@/utils/dataValidation";
-import { LicenseForm } from "@/components/LicenseForm";
+import LicenseForm from "@/components/LicenseForm";
 import AppHeader from "@/components/AppHeader";
 import EnhancedImageUpload from "@/components/EnhancedImageUpload";
 import LicenseFormSkeleton from "@/components/LicenseFormSkeleton";

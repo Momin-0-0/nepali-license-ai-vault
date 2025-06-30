@@ -1,3 +1,4 @@
+
 import '@testing-library/jest-dom'
 import { vi } from 'vitest'
 
@@ -36,8 +37,10 @@ const localStorageMock = {
   setItem: vi.fn(),
   removeItem: vi.fn(),
   clear: vi.fn(),
+  length: 0,
+  key: vi.fn(() => null),
 }
-global.localStorage = localStorageMock
+global.localStorage = localStorageMock as Storage
 
 // Mock crypto
 Object.defineProperty(global, 'crypto', {
