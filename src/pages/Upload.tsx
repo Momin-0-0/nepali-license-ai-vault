@@ -1,290 +1,284 @@
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Shield, ArrowLeft, CheckCircle } from "lucide-react";
-import { useToast } from "@/hooks/use-toast";
-import { LicenseData } from '@/types/license';
-import ImageUpload from '@/components/ImageUpload';
-import LicenseForm from '@/components/LicenseForm';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Separator } from "@/components/ui/separator";
-import { useLocalStorage } from '@/hooks/useLocalStorage';
-import { validateImageFile } from '@/utils/validation';
-import { compressImage } from '@/utils/performance';
-import { generateSecureToken } from '@/utils/security';
+import { Check } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
+import { useOfflineSync } from "@/hooks/useOfflineSync";
+import { useLocalStorage } from "@/hooks/useLocalStorage";
+import { processImageWithOCR } from "@/utils/ocrUtils";
+import { validateLicenseData } from "@/utils/dataValidation";
+import { LicenseForm } from "@/components/LicenseForm";
+import AppHeader from "@/components/AppHeader";
+import EnhancedImageUpload from "@/components/EnhancedImageUpload";
+import LicenseFormSkeleton from "@/components/LicenseFormSkeleton";
 
 const Upload = () => {
-  const [imagePreview, setImagePreview] = useState<string>('');
-  const [licenseData, setLicenseData] = useState<LicenseData>({
+  const [user] = useLocalStorage('user', null, true);
+  const [licenseData, setLicenseData] = useState({
     licenseNumber: '',
     holderName: '',
     issueDate: '',
     expiryDate: '',
-    issuingAuthority: 'Department of Transport Management',
+    issuingAuthority: '',
     address: ''
   });
-  const [step, setStep] = useState<'upload' | 'form' | 'complete'>('upload');
+  const [uploadedImage, setUploadedImage] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
-  const [licenses, setLicenses] = useLocalStorage<any[]>('licenses', [], true);
-  const { toast } = useToast();
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [progressText, setProgressText] = useState('Initializing...');
+  const [currentStep, setCurrentStep] = useState(1);
   const navigate = useNavigate();
+  const { toast } = useToast();
+  const { isOnline } = useOfflineSync();
 
-  const handleDataExtracted = (extractedData: Partial<LicenseData>) => {
-    setLicenseData(prev => ({
-      ...prev,
-      ...extractedData
-    }));
-    
-    // Auto-advance to form if we have good extraction
-    if (extractedData.licenseNumber || extractedData.holderName) {
-      setStep('form');
-      toast({
-        title: "License Detected",
-        description: "We've extracted some information from your license image.",
-      });
+  useEffect(() => {
+    if (!user) {
+      navigate('/login');
+      return;
     }
+  }, [user, navigate]);
+
+  const handleImageUpload = async (file: File) => {
+    console.log('Image uploaded:', file);
   };
 
-  const handleImageUploaded = async (imageUrl: string) => {
-    setImagePreview(imageUrl);
-    
-    // Compress image for better performance
-    try {
-      const response = await fetch(imageUrl);
-      const blob = await response.blob();
-      const file = new File([blob], 'license.jpg', { type: 'image/jpeg' });
-      
-      const validation = validateImageFile(file);
-      if (!validation.isValid) {
-        toast({
-          title: "Invalid Image",
-          description: validation.errors.join(', '),
-          variant: "destructive",
-        });
-        return;
-      }
-
-      const compressedBlob = await compressImage(file, 0.8);
-      const compressedUrl = URL.createObjectURL(compressedBlob);
-      setImagePreview(compressedUrl);
-    } catch (error) {
-      console.error('Image compression failed:', error);
-      // Continue with original image if compression fails
-    }
-  };
-
-  const handleProceedToForm = () => {
-    setStep('form');
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsProcessing(true);
-    
-    if (!licenseData.licenseNumber || !licenseData.expiryDate) {
+  const handleStartOCR = useCallback(async () => {
+    if (!uploadedImage) {
       toast({
-        title: "Missing Information",
-        description: "Please fill in at least the license number and expiry date.",
+        title: "No Image",
+        description: "Please upload a license image first.",
         variant: "destructive",
       });
-      setIsProcessing(false);
       return;
     }
 
+    setIsProcessing(true);
+    setProgressText('Starting OCR...');
+    setCurrentStep(2);
+
     try {
-      // Check for duplicates
-      const isDuplicate = licenses.some((license: any) => 
-        license.licenseNumber === licenseData.licenseNumber
-      );
-      
-      if (isDuplicate) {
+      const file = await fetch(uploadedImage).then(r => r.blob());
+      const extractedData = await processImageWithOCR(file as any, (progress) => {
+        setProgressText(progress);
+      });
+
+      if (extractedData) {
+        setLicenseData(extractedData as any);
+      } else {
         toast({
-          title: "Duplicate License",
-          description: "This license number already exists in your vault.",
+          title: "OCR Failed",
+          description: "Could not extract data from the image. Please try again or enter manually.",
           variant: "destructive",
         });
-        setIsProcessing(false);
-        return;
       }
-      
-      // Create new license object with secure ID
-      const newLicense = {
-        id: generateSecureToken(),
-        ...licenseData,
-        image: imagePreview,
-        shared: false,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
-      };
-
-      // Save to encrypted localStorage
-      const updatedLicenses = [...licenses, newLicense];
-      setLicenses(updatedLicenses);
-
-      setStep('complete');
-      
-      setTimeout(() => {
-        toast({
-          title: "License Added Successfully",
-          description: "Your driving license has been added to your vault.",
-        });
-        navigate('/dashboard');
-      }, 2000);
-      
-    } catch (error) {
-      console.error('Save error:', error);
+    } catch (error: any) {
+      console.error("OCR Error:", error);
       toast({
-        title: "Error",
-        description: "Failed to save license. Please try again.",
+        title: "OCR Error",
+        description: error.message || "Failed to process image. Please try again.",
         variant: "destructive",
       });
     } finally {
       setIsProcessing(false);
     }
+  }, [uploadedImage, toast]);
+
+  const handleSubmit = async () => {
+    setIsSubmitting(true);
+    setProgressText('Submitting data...');
+
+    try {
+      validateLicenseData(licenseData);
+
+      // Simulate API call
+      await new Promise(resolve => setTimeout(resolve, 1500));
+
+      // Save to local storage
+      const licenses = JSON.parse(localStorage.getItem('licenses') || '[]') as any[];
+      const newLicense = { ...licenseData, id: Date.now().toString(), image: uploadedImage, shared: false };
+      licenses.push(newLicense);
+      localStorage.setItem('licenses', JSON.stringify(licenses));
+
+      toast({
+        title: "License Saved",
+        description: "Your license has been successfully saved.",
+      });
+      setCurrentStep(3);
+    } catch (error: any) {
+      console.error("Validation Error:", error);
+      toast({
+        title: "Validation Error",
+        description: error.message || "Please check the form data.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSubmitting(false);
+      setProgressText('Ready');
+    }
   };
-
-  const renderStepIndicator = () => (
-    <div className="flex items-center justify-center gap-4 mb-8">
-      <div className={`flex items-center gap-2 ${step === 'upload' ? 'text-blue-600' : 'text-green-600'}`}>
-        <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
-          step === 'upload' ? 'bg-blue-100 border-2 border-blue-600' : 'bg-green-100'
-        }`}>
-          {step === 'upload' ? '1' : <CheckCircle className="w-5 h-5" />}
-        </div>
-        <span className="font-medium">Upload Image</span>
-      </div>
-      
-      <Separator className="w-12" />
-      
-      <div className={`flex items-center gap-2 ${
-        step === 'form' ? 'text-blue-600' : 
-        step === 'complete' ? 'text-green-600' : 'text-gray-400'
-      }`}>
-        <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
-          step === 'form' ? 'bg-blue-100 border-2 border-blue-600' :
-          step === 'complete' ? 'bg-green-100' : 'bg-gray-100'
-        }`}>
-          {step === 'complete' ? <CheckCircle className="w-5 h-5" /> : '2'}
-        </div>
-        <span className="font-medium">Enter Details</span>
-      </div>
-      
-      <Separator className="w-12" />
-      
-      <div className={`flex items-center gap-2 ${
-        step === 'complete' ? 'text-green-600' : 'text-gray-400'
-      }`}>
-        <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
-          step === 'complete' ? 'bg-green-100' : 'bg-gray-100'
-        }`}>
-          {step === 'complete' ? <CheckCircle className="w-5 h-5" /> : '3'}
-        </div>
-        <span className="font-medium">Complete</span>
-      </div>
-    </div>
-  );
-
-  if (step === 'complete') {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-red-50 flex items-center justify-center">
-        <Card className="w-full max-w-md text-center shadow-xl">
-          <CardContent className="p-8">
-            <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6">
-              <CheckCircle className="w-8 h-8 text-green-600" />
-            </div>
-            <h2 className="text-2xl font-bold text-gray-900 mb-2">License Added!</h2>
-            <p className="text-gray-600 mb-6">
-              Your driving license has been successfully added to your vault.
-            </p>
-            <div className="w-8 h-1 bg-gradient-to-r from-blue-600 to-green-600 rounded mx-auto animate-pulse"></div>
-            <p className="text-sm text-gray-500 mt-4">Redirecting to dashboard...</p>
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-red-50">
-      {/* Enhanced Header */}
-      <header className="border-b bg-white/80 backdrop-blur-sm sticky top-0 z-10">
-        <div className="container mx-auto px-4 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <Button 
-                variant="ghost" 
-                size="sm" 
-                onClick={() => navigate('/dashboard')}
-                className="hover:bg-gray-100"
-              >
-                <ArrowLeft className="w-4 h-4 mr-2" />
-                Back
-              </Button>
-              <Separator orientation="vertical" className="h-6" />
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-lg overflow-hidden shadow-lg">
-                  <img 
-                    src="/Gemini_Generated_Image_w0veeiw0veeiw0ve 1.png" 
-                    alt="NepLife Logo"
-                    className="w-full h-full object-contain bg-white"
-                  />
-                </div>
-                <div>
-                  <h1 className="text-xl font-bold bg-gradient-to-r from-blue-600 to-red-600 bg-clip-text text-transparent">
-                    Add New License
-                  </h1>
-                  <p className="text-sm text-gray-600">Upload and manage your driving license</p>
-                </div>
-              </div>
-            </div>
-            
-            <Badge variant="outline" className="hidden sm:inline-flex">
-              Step {step === 'upload' ? '1' : '2'} of 3
-            </Badge>
-          </div>
-        </div>
-      </header>
+      <AppHeader user={user} isOnline={isOnline} />
 
       <div className="container mx-auto px-4 py-8">
-        <div className="max-w-6xl mx-auto">
-          {renderStepIndicator()}
-          
-          {step === 'upload' ? (
-            <div className="max-w-2xl mx-auto">
-              <ImageUpload 
-                onDataExtracted={handleDataExtracted} 
-                onImageUploaded={handleImageUploaded}
+        <div className="max-w-4xl mx-auto">
+          {/* Enhanced Header */}
+          <div className="text-center mb-8">
+            <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-600 to-green-600 bg-clip-text text-transparent mb-4">
+              Upload Your Nepal Driving License
+            </h1>
+            <p className="text-xl text-gray-600 mb-2">
+              Secure digital storage with AI-powered data extraction
+            </p>
+            <p className="text-gray-500">
+              Our advanced OCR technology will automatically extract license details from your image
+            </p>
+          </div>
+
+          {/* Progress Indicator */}
+          <div className="flex items-center justify-center mb-8">
+            <div className="flex items-center space-x-4">
+              <div className={`flex items-center justify-center w-8 h-8 rounded-full ${
+                currentStep >= 1 ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-500'
+              }`}>
+                <span className="text-sm font-medium">1</span>
+              </div>
+              <div className={`h-1 w-16 ${currentStep >= 2 ? 'bg-blue-600' : 'bg-gray-200'}`}></div>
+              <div className={`flex items-center justify-center w-8 h-8 rounded-full ${
+                currentStep >= 2 ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-500'
+              }`}>
+                <span className="text-sm font-medium">2</span>
+              </div>
+              <div className={`h-1 w-16 ${currentStep >= 3 ? 'bg-blue-600' : 'bg-gray-200'}`}></div>
+              <div className={`flex items-center justify-center w-8 h-8 rounded-full ${
+                currentStep >= 3 ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-500'
+              }`}>
+                <span className="text-sm font-medium">3</span>
+              </div>
+            </div>
+          </div>
+
+          <div className="space-y-8">
+            {/* Step Labels */}
+            <div className="text-center space-y-2">
+              <h2 className="text-2xl font-semibold text-gray-800">
+                {currentStep === 1 && "Step 1: Upload License Image"}
+                {currentStep === 2 && "Step 2: Review Extracted Data"}
+                {currentStep === 3 && "Step 3: Save License"}
+              </h2>
+              <p className="text-gray-600">
+                {currentStep === 1 && "Take a clear photo or upload an image of your Nepal driving license"}
+                {currentStep === 2 && "Verify and edit the automatically extracted license information"}
+                {currentStep === 3 && "Complete the process and save your license securely"}
+              </p>
+            </div>
+
+            {/* Step 1: Enhanced Image Upload */}
+            {currentStep === 1 && (
+              <EnhancedImageUpload
+                onImageSelected={handleImageUpload}
+                onImageProcessed={setUploadedImage}
+                isProcessing={isProcessing}
+                acceptedFormats={['image/jpeg', 'image/png', 'image/webp']}
+                maxSizeInMB={10}
               />
-              {imagePreview && (
-                <div className="mt-6 text-center">
-                  <Button onClick={handleProceedToForm} size="lg">
-                    Continue to License Details
-                  </Button>
-                </div>
-              )}
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-              <div className="lg:order-2">
-                <ImageUpload 
-                  onDataExtracted={handleDataExtracted} 
-                  onImageUploaded={handleImageUploaded}
-                />
+            )}
+
+            {/* OCR Processing Status */}
+            {isProcessing && (
+              <Card className="border-2 border-blue-200 bg-blue-50">
+                <CardContent className="p-6">
+                  <div className="flex items-center justify-center space-x-4">
+                    <div className="w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+                    <div className="text-center">
+                      <p className="text-lg font-medium text-blue-800">{progressText}</p>
+                      <p className="text-sm text-blue-600 mt-1">This may take a few moments...</p>
+                    </div>
+                  </div>
+                  <div className="mt-4">
+                    <div className="bg-white rounded-full h-2">
+                      <div 
+                        className="bg-blue-600 h-2 rounded-full transition-all duration-300"
+                        style={{ width: `${Math.min(100, (progressText.includes('%') ? 
+                          parseInt(progressText.match(/\d+/)?.[0] || '0') : 50))}%` }}
+                      ></div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Step 2: License Form or Skeleton */}
+            {currentStep === 2 && (
+              <>
+                {isProcessing ? (
+                  <LicenseFormSkeleton />
+                ) : (
+                  <LicenseForm
+                    licenseData={licenseData}
+                    onDataChange={setLicenseData}
+                    onSubmit={handleSubmit}
+                    onCancel={() => setCurrentStep(1)}
+                    isProcessing={isSubmitting}
+                    disabled={isSubmitting}
+                  />
+                )}
+              </>
+            )}
+
+            {/* Step 3: Success Message */}
+            {currentStep === 3 && (
+              <Card className="border-2 border-green-200 bg-green-50">
+                <CardContent className="p-8 text-center">
+                  <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <Check className="w-8 h-8 text-green-600" />
+                  </div>
+                  <h3 className="text-2xl font-bold text-green-800 mb-2">License Uploaded Successfully!</h3>
+                  <p className="text-green-700 mb-6">
+                    Your Nepal driving license has been securely stored and is now available in your dashboard.
+                  </p>
+                  <div className="flex gap-4 justify-center">
+                    <Button onClick={() => navigate('/dashboard')} className="bg-green-600 hover:bg-green-700">
+                      Go to Dashboard
+                    </Button>
+                    <Button 
+                      variant="outline" 
+                      onClick={() => {
+                        setCurrentStep(1);
+                        setUploadedImage('');
+                        setLicenseData({
+                          licenseNumber: '',
+                          holderName: '',
+                          issueDate: '',
+                          expiryDate: '',
+                          issuingAuthority: '',
+                          address: ''
+                        });
+                      }}
+                      className="border-green-200 text-green-700 hover:bg-green-50"
+                    >
+                      Upload Another License
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Navigation Buttons */}
+            {currentStep < 3 && uploadedImage && !isProcessing && (
+              <div className="text-center">
+                <Button
+                  onClick={handleStartOCR}
+                  disabled={isProcessing || !uploadedImage}
+                  className="bg-gradient-to-r from-blue-600 to-green-600 hover:from-blue-700 hover:to-green-700 px-8 py-3 text-lg font-semibold"
+                >
+                  {currentStep === 1 ? 'Extract License Data' : 'Process License'}
+                </Button>
               </div>
-              
-              <div className="lg:order-1">
-                <LicenseForm 
-                  licenseData={licenseData}
-                  onDataChange={setLicenseData}
-                  onSubmit={handleSubmit}
-                  onCancel={() => navigate('/dashboard')}
-                  isProcessing={isProcessing}
-                  disabled={false}
-                />
-              </div>
-            </div>
-          )}
+            )}
+          </div>
         </div>
       </div>
     </div>

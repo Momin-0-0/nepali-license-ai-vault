@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Shield, Upload, Bell, Share2, FileText, Calendar, User, LogOut, Plus, Image } from "lucide-react";
+import { Bell, Share2, FileText, Plus } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { format, differenceInDays, parseISO } from 'date-fns';
 import RemindersModal from "@/components/RemindersModal";
@@ -13,6 +13,7 @@ import QuickActionCard from "@/components/QuickActionCard";
 import LicenseCard from "@/components/LicenseCard";
 import EmptyState from "@/components/EmptyState";
 import LoadingSpinner from "@/components/LoadingSpinner";
+import DashboardStats from "@/components/DashboardStats";
 import { useOfflineSync } from "@/hooks/useOfflineSync";
 import { useLocalStorage } from "@/hooks/useLocalStorage";
 
@@ -113,6 +114,8 @@ const Dashboard = () => {
         user={user} 
         isOnline={isOnline} 
         licenses={licenses}
+        showSearch={true}
+        onSearch={(query) => console.log('Search:', query)}
       />
 
       <div className="container mx-auto px-4 py-8">
@@ -128,6 +131,9 @@ const Dashboard = () => {
 
         {/* Notification Service */}
         <NotificationService licenses={licenses} reminders={reminders} />
+
+        {/* Enhanced Stats Dashboard */}
+        <DashboardStats licenses={licenses} />
 
         {/* Quick Actions */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
@@ -167,7 +173,7 @@ const Dashboard = () => {
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2 text-orange-700">
                     <Bell className="w-5 h-5" />
-                    Expiring Soon
+                    Action Required - Licenses Expiring Soon
                   </CardTitle>
                   <CardDescription>
                     You have {expiringLicenses.length} license(s) expiring within 30 days
@@ -177,19 +183,20 @@ const Dashboard = () => {
                   {expiringLicenses.map(license => {
                     const daysLeft = differenceInDays(parseISO(license.expiryDate), new Date());
                     return (
-                      <div key={license.id} className="flex justify-between items-center p-3 bg-white rounded-lg mb-2 last:mb-0">
+                      <div key={license.id} className="flex justify-between items-center p-3 bg-white rounded-lg mb-2 last:mb-0 shadow-sm">
                         <div>
                           <p className="font-medium">{license.licenseNumber}</p>
                           <p className="text-sm text-orange-600">
-                            Expires in {daysLeft} day{daysLeft !== 1 ? 's' : ''}
+                            Expires in {daysLeft} day{daysLeft !== 1 ? 's' : ''} ({format(parseISO(license.expiryDate), 'MMM dd, yyyy')})
                           </p>
                         </div>
                         <Button 
                           size="sm" 
                           variant="outline"
                           onClick={() => handleRenewLicense(license.id)}
+                          className="bg-orange-50 border-orange-200 text-orange-700 hover:bg-orange-100"
                         >
-                          Renew
+                          Renew Now
                         </Button>
                       </div>
                     );
@@ -205,10 +212,10 @@ const Dashboard = () => {
                   <div>
                     <CardTitle>My Licenses</CardTitle>
                     <CardDescription>
-                      Manage all your driving licenses
+                      Manage all your driving licenses ({licenses.length} total)
                     </CardDescription>
                   </div>
-                  <Button onClick={() => navigate('/upload')}>
+                  <Button onClick={() => navigate('/upload')} className="bg-gradient-to-r from-blue-600 to-green-600 hover:from-blue-700 hover:to-green-700">
                     <Plus className="w-4 h-4 mr-2" />
                     Add License
                   </Button>
@@ -219,13 +226,13 @@ const Dashboard = () => {
                   <EmptyState
                     icon={FileText}
                     title="No licenses uploaded yet"
-                    description="Upload your first driving license to get started with managing your documents."
+                    description="Upload your first driving license to get started with managing your documents securely."
                     actionLabel="Upload Your First License"
                     onAction={() => navigate('/upload')}
                   />
                 ) : (
                   <div className="space-y-4">
-                    {licenses.map(license => (
+                    {licenses.slice(0, 3).map(license => (
                       <LicenseCard
                         key={license.id}
                         license={license}
@@ -235,6 +242,17 @@ const Dashboard = () => {
                         onViewImage={setSelectedImageLicense}
                       />
                     ))}
+                    {licenses.length > 3 && (
+                      <div className="text-center pt-4">
+                        <Button 
+                          variant="outline" 
+                          onClick={() => navigate('/all-licenses')}
+                          className="w-full"
+                        >
+                          View All {licenses.length} Licenses
+                        </Button>
+                      </div>
+                    )}
                   </div>
                 )}
               </CardContent>
@@ -243,33 +261,8 @@ const Dashboard = () => {
 
           {/* Sidebar */}
           <div className="space-y-6">
-            {/* Quick Stats */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Quick Stats</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="flex justify-between items-center">
-                  <span className="text-gray-600">Total Licenses</span>
-                  <span className="font-semibold text-2xl">{licenses.length}</span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-gray-600">Active Licenses</span>
-                  <span className="font-semibold text-2xl text-green-600">
-                    {licenses.filter(l => differenceInDays(parseISO(l.expiryDate), new Date()) > 0).length}
-                  </span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-gray-600">Expiring Soon</span>
-                  <span className="font-semibold text-2xl text-orange-600">{expiringLicenses.length}</span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-gray-600">Shared Links</span>
-                  <span className="font-semibold text-2xl text-blue-600">{licenses.filter(l => l.shared).length}</span>
-                </div>
-              </CardContent>
-            </Card>
-
+            {/* Quick Stats - moved to top as DashboardStats component */}
+            
             {/* Recent Activity */}
             <Card>
               <CardHeader>
@@ -277,17 +270,34 @@ const Dashboard = () => {
               </CardHeader>
               <CardContent>
                 <div className="space-y-3 text-sm">
-                  <div className="flex items-center gap-3 p-2 rounded-lg hover:bg-gray-50">
-                    <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-                    <span className="text-gray-600 flex-1">License uploaded</span>
-                    <span className="text-gray-400">2h ago</span>
-                  </div>
-                  <div className="flex items-center gap-3 p-2 rounded-lg hover:bg-gray-50">
-                    <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                    <span className="text-gray-600 flex-1">Account created</span>
-                    <span className="text-gray-400">1d ago</span>
-                  </div>
+                  {licenses.slice(0, 5).map((license, index) => (
+                    <div key={license.id} className="flex items-center gap-3 p-2 rounded-lg hover:bg-gray-50 transition-colors">
+                      <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                      <span className="text-gray-600 flex-1">
+                        License {license.licenseNumber} {index === 0 ? 'uploaded' : 'processed'}
+                      </span>
+                      <span className="text-gray-400">
+                        {index === 0 ? '2h ago' : `${index + 1}d ago`}
+                      </span>
+                    </div>
+                  ))}
+                  {licenses.length === 0 && (
+                    <p className="text-gray-500 text-center py-4">No recent activity</p>
+                  )}
                 </div>
+              </CardContent>
+            </Card>
+
+            {/* Quick Tips */}
+            <Card className="bg-gradient-to-br from-indigo-50 to-blue-50 border-indigo-200">
+              <CardHeader>
+                <CardTitle className="text-indigo-800">💡 Pro Tips</CardTitle>
+              </CardHeader>
+              <CardContent className="text-sm space-y-2">
+                <p className="text-indigo-700">• Upload clear, well-lit license images for better OCR accuracy</p>
+                <p className="text-indigo-700">• Set up renewal reminders 60 days before expiry</p>
+                <p className="text-indigo-700">• Use shared links to provide temporary access</p>
+                <p className="text-indigo-700">• Keep digital backups of all your important documents</p>
               </CardContent>
             </Card>
           </div>

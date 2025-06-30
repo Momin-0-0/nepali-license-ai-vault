@@ -14,6 +14,7 @@ import { Badge } from "@/components/ui/badge";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import NotificationCenter from "./NotificationCenter";
+import GlobalSearch from "./GlobalSearch";
 
 interface AppHeaderProps {
   user: any;
@@ -69,6 +70,9 @@ const AppHeader = ({
                   NepLife
                 </h1>
                 <div className="flex items-center gap-2">
+                  <Badge variant="outline" className="text-xs bg-blue-50 text-blue-700 border-blue-200">
+                    AI Powered
+                  </Badge>
                   {!isOnline && (
                     <Badge variant="outline" className="text-xs bg-orange-50 text-orange-700 border-orange-200">
                       Offline Mode
@@ -79,17 +83,10 @@ const AppHeader = ({
             </div>
           </div>
 
-          {/* Center section - Search */}
+          {/* Center section - Enhanced Global Search */}
           {showSearch && (
             <div className="hidden md:flex items-center flex-1 max-w-md mx-8">
-              <div className="relative w-full">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-                <Input
-                  placeholder="Search licenses..."
-                  className="pl-10 bg-gray-50 border-gray-200 focus:bg-white"
-                  onChange={(e) => onSearch?.(e.target.value)}
-                />
-              </div>
+              <GlobalSearch licenses={licenses} />
             </div>
           )}
 
@@ -101,9 +98,9 @@ const AppHeader = ({
             {/* User menu */}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="ghost" className="relative h-9 px-2 gap-2">
+                <Button variant="ghost" className="relative h-9 px-2 gap-2 hover:bg-gray-100">
                   <Avatar className="h-8 w-8">
-                    <AvatarFallback className="bg-gradient-to-br from-blue-500 to-green-500 text-white text-sm">
+                    <AvatarFallback className="bg-gradient-to-br from-blue-500 to-green-500 text-white text-sm font-medium">
                       {user?.name?.charAt(0)?.toUpperCase() || user?.firstName?.charAt(0)?.toUpperCase() || 'U'}
                     </AvatarFallback>
                   </Avatar>
@@ -112,7 +109,7 @@ const AppHeader = ({
                   </span>
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent className="w-56 bg-white shadow-xl" align="end" forceMount>
+              <DropdownMenuContent className="w-56 bg-white shadow-xl border" align="end" forceMount>
                 <DropdownMenuLabel className="font-normal">
                   <div className="flex flex-col space-y-1">
                     <p className="text-sm font-medium leading-none">
@@ -135,7 +132,7 @@ const AppHeader = ({
                   Settings
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={handleLogout} className="cursor-pointer text-red-600 focus:text-red-600">
+                <DropdownMenuItem onClick={handleLogout} className="cursor-pointer text-red-600 focus:text-red-600 focus:bg-red-50">
                   <LogOut className="mr-2 h-4 w-4" />
                   Log out
                 </DropdownMenuItem>
