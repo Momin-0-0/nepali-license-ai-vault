@@ -44,11 +44,20 @@ const AppHeader = ({
     toast = toastHook.toast;
   } catch (error) {
     console.error('Hook initialization error:', error);
-    // Fallback navigation function
-    navigate = (path: string) => {
-      window.location.href = path;
-    };
-    toast = () => {};
+    // Fallback navigation function with correct type signature
+    navigate = ((pathOrDelta: string | number) => {
+      if (typeof pathOrDelta === 'string') {
+        window.location.href = pathOrDelta;
+      }
+      // For number delta, we can't really navigate back/forward without history API
+    }) as ReturnType<typeof useNavigate>;
+    
+    // Fallback toast function with correct return type
+    toast = (() => ({
+      id: 'fallback',
+      dismiss: () => {},
+      update: () => {}
+    })) as ReturnType<typeof useToast>['toast'];
   }
 
   const handleLogout = () => {
