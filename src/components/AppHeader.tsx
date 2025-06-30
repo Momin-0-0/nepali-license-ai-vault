@@ -1,3 +1,4 @@
+
 import { Shield, User, LogOut, Menu, Settings, Search, BarChart3 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -33,16 +34,46 @@ const AppHeader = ({
   showSearch = false,
   onSearch
 }: AppHeaderProps) => {
-  const navigate = useNavigate();
-  const { toast } = useToast();
+  // Safely use hooks with error boundary
+  let navigate: ReturnType<typeof useNavigate>;
+  let toast: ReturnType<typeof useToast>['toast'];
+  
+  try {
+    navigate = useNavigate();
+    const toastHook = useToast();
+    toast = toastHook.toast;
+  } catch (error) {
+    console.error('Hook initialization error:', error);
+    // Fallback navigation function
+    navigate = (path: string) => {
+      window.location.href = path;
+    };
+    toast = () => {};
+  }
 
   const handleLogout = () => {
-    localStorage.removeItem('user');
-    toast({
-      title: "Logged out",
-      description: "You have been logged out successfully",
-    });
-    navigate('/');
+    try {
+      localStorage.removeItem('user');
+      toast({
+        title: "Logged out",
+        description: "You have been logged out successfully",
+      });
+      navigate('/');
+    } catch (error) {
+      console.error('Logout error:', error);
+      // Fallback logout
+      localStorage.clear();
+      window.location.href = '/';
+    }
+  };
+
+  const handleNavigation = (path: string) => {
+    try {
+      navigate(path);
+    } catch (error) {
+      console.error('Navigation error:', error);
+      window.location.href = path;
+    }
   };
 
   return (
@@ -57,7 +88,7 @@ const AppHeader = ({
               </Button>
             )}
             
-            <div className="flex items-center gap-3 cursor-pointer" onClick={() => navigate('/dashboard')}>
+            <div className="flex items-center gap-3 cursor-pointer" onClick={() => handleNavigation('/dashboard')}>
               <div className="w-12 h-12 rounded-lg overflow-hidden shadow-lg hover:shadow-xl transition-shadow">
                 <img 
                   src="/Gemini_Generated_Image_w0veeiw0veeiw0ve 1.png" 
@@ -119,15 +150,15 @@ const AppHeader = ({
                   </div>
                 </DropdownMenuLabel>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={() => navigate('/profile')} className="cursor-pointer">
+                <DropdownMenuItem onClick={() => handleNavigation('/profile')} className="cursor-pointer">
                   <User className="mr-2 h-4 w-4" />
                   Profile
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => navigate('/analytics')} className="cursor-pointer">
+                <DropdownMenuItem onClick={() => handleNavigation('/analytics')} className="cursor-pointer">
                   <BarChart3 className="mr-2 h-4 w-4" />
                   Analytics
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => navigate('/settings')} className="cursor-pointer">
+                <DropdownMenuItem onClick={() => handleNavigation('/settings')} className="cursor-pointer">
                   <Settings className="mr-2 h-4 w-4" />
                   Settings
                 </DropdownMenuItem>
