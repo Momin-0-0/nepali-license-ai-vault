@@ -4,7 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { FileText, AlertCircle, Loader2, CheckCircle, XCircle, Info } from "lucide-react";
+import { FileText, AlertCircle, Loader2, CheckCircle, XCircle, Info, RefreshCw, Eye, EyeOff } from "lucide-react";
 import { LicenseData } from '@/types/license';
 import { validateNepalLicenseNumber, validateDate, validateExpiryDate, sanitizeInput } from '@/utils/validation';
 
@@ -27,6 +27,21 @@ const LicenseForm = ({
 }: LicenseFormProps) => {
   const [errors, setErrors] = useState<Record<string, string[]>>({});
   const [touched, setTouched] = useState<Record<string, boolean>>({});
+  const [autoFilledFields, setAutoFilledFields] = useState<Record<string, boolean>>({});
+  const [verificationStatus, setVerificationStatus] = useState<Record<string, 'pending' | 'verified' | 'corrected'>>({});
+  const [showVerificationHelper, setShowVerificationHelper] = useState(true);
+
+  // Track auto-filled fields when component mounts
+  useEffect(() => {
+    const autoFilled: Record<string, boolean> = {};
+    Object.keys(licenseData).forEach(field => {
+      if (licenseData[field as keyof LicenseData] && licenseData[field as keyof LicenseData] !== '') {
+        autoFilled[field] = true;
+        setVerificationStatus(prev => ({ ...prev, [field]: 'pending' }));
+      }
+    });
+    setAutoFilledFields(autoFilled);
+  }, []);
 
   const updateField = (field: keyof LicenseData, value: string) => {
     const sanitizedValue = sanitizeInput(value);
@@ -35,10 +50,20 @@ const LicenseForm = ({
       [field]: sanitizedValue
     });
     
+    // Mark as corrected if it was auto-filled
+    if (autoFilledFields[field]) {
+      setVerificationStatus(prev => ({ ...prev, [field]: 'corrected' }));
+    }
+    
     // Clear errors when user starts typing
     if (errors[field]) {
       setErrors(prev => ({ ...prev, [field]: [] }));
     }
+  };
+
+  const verifyField = (field: keyof LicenseData) => {
+    setVerificationStatus(prev => ({ ...prev, [field]: 'verified' }));
+    setTouched(prev => ({ ...prev, [field]: true }));
   };
 
   const validateField = (field: keyof LicenseData, value: string) => {
@@ -132,165 +157,217 @@ const LicenseForm = ({
     return null;
   };
 
+  const renderFieldWithVerification = (
+    field: keyof LicenseData,
+    label: string,
+    placeholder: string,
+    required: boolean = false,
+    type: string = "text",
+    isTextarea: boolean = false
+  ) => {
+    const isAutoFilled = autoFilledFields[field];
+    const status = verificationStatus[field];
+    const fieldError = errors[field];
+    
+    return (
+      <div className="space-y-2">
+        <Label htmlFor={field} className="flex items-center gap-2">
+          {label} {required && '*'}
+          {renderFieldIcon(field)}
+          {isAutoFilled && (
+            <div className="flex items-center gap-1">
+              {status === 'pending' && (
+                <div className="bg-yellow-100 text-yellow-800 px-2 py-1 rounded-full text-xs font-medium flex items-center gap-1">
+                  <Eye className="w-3 h-3" />
+                  Auto-filled - Please verify
+                </div>
+              )}
+              {status === 'verified' && (
+                <div className="bg-green-100 text-green-800 px-2 py-1 rounded-full text-xs font-medium flex items-center gap-1">
+                  <CheckCircle className="w-3 h-3" />
+                  Verified
+                </div>
+              )}
+              {status === 'corrected' && (
+                <div className="bg-blue-100 text-blue-800 px-2 py-1 rounded-full text-xs font-medium flex items-center gap-1">
+                  <RefreshCw className="w-3 h-3" />
+                  Corrected
+                </div>
+              )}
+            </div>
+          )}
+        </Label>
+        
+        <div className="relative">
+          {isTextarea ? (
+            <Textarea
+              id={field}
+              value={licenseData[field]}
+              onChange={(e) => updateField(field, e.target.value)}
+              onBlur={() => handleBlur(field)}
+              placeholder={placeholder}
+              rows={3}
+              disabled={disabled}
+              className={`${fieldError?.length > 0 ? 'border-red-500' : ''} ${
+                isAutoFilled && status === 'pending' ? 'border-yellow-400 bg-yellow-50' : ''
+              }`}
+            />
+          ) : (
+            <Input
+              id={field}
+              type={type}
+              value={licenseData[field]}
+              onChange={(e) => updateField(field, field === 'licenseNumber' ? e.target.value.toUpperCase() : e.target.value)}
+              onBlur={() => handleBlur(field)}
+              placeholder={placeholder}
+              required={required}
+              disabled={disabled}
+              className={`${fieldError?.length > 0 ? 'border-red-500' : ''} ${
+                isAutoFilled && status === 'pending' ? 'border-yellow-400 bg-yellow-50' : ''
+              }`}
+            />
+          )}
+          
+          {isAutoFilled && status === 'pending' && (
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => verifyField(field)}
+              className="absolute right-2 top-2 h-6 px-2 text-xs bg-green-50 hover:bg-green-100 text-green-700 border-green-200"
+            >
+              ✓ Correct
+            </Button>
+          )}
+        </div>
+        
+        {touched[field] && fieldError?.map((error, index) => (
+          <p key={index} className="text-sm text-red-500">{error}</p>
+        ))}
+      </div>
+    );
+  };
+
   return (
     <Card className={disabled ? 'opacity-60' : ''}>
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <FileText className="w-5 h-5" />
-          Nepal License Details
+          Nepal License Details - Auto-Filled
         </CardTitle>
         <CardDescription>
-          Review and edit the extracted information from your Nepal driving license
+          OCR has automatically extracted information from your Nepal driving license. Please verify each field is correct.
         </CardDescription>
       </CardHeader>
       <CardContent>
-        {/* Nepal License Format Info */}
-        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
-          <div className="flex items-start gap-3">
-            <Info className="w-5 h-5 text-blue-600 mt-0.5" />
-            <div className="text-sm text-blue-700">
-              <p className="font-medium mb-2">Nepal License Format Guide:</p>
-              <ul className="list-disc list-inside space-y-1 text-xs">
-                <li><strong>License Number:</strong> XX-XX-XXXXXXXXX (e.g., 03-06-041605052)</li>
-                <li><strong>Date Format:</strong> DD-MM-YYYY (Nepal standard)</li>
-                <li><strong>Authority:</strong> Department of Transport Management, Government of Nepal</li>
-                <li><strong>Validation:</strong> All fields are validated for Nepal license standards</li>
-              </ul>
+        {/* Auto-fill Status */}
+        {Object.keys(autoFilledFields).length > 0 && (
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
+            <div className="flex items-start gap-3">
+              <Info className="w-5 h-5 text-blue-600 mt-0.5" />
+              <div className="text-sm text-blue-700">
+                <p className="font-medium mb-2">Auto-Fill Status:</p>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-xs">
+                  {Object.entries(autoFilledFields).map(([field, isAutoFilled]) => (
+                    <div key={field} className="flex items-center gap-2">
+                      <span className="capitalize">{field.replace(/([A-Z])/g, ' $1').trim()}:</span>
+                      {verificationStatus[field] === 'verified' && (
+                        <span className="text-green-600 font-medium">✓ Verified</span>
+                      )}
+                      {verificationStatus[field] === 'corrected' && (
+                        <span className="text-blue-600 font-medium">✓ Corrected</span>
+                      )}
+                      {verificationStatus[field] === 'pending' && (
+                        <span className="text-yellow-600 font-medium">⏳ Needs verification</span>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
             </div>
           </div>
-        </div>
+        )}
+
+        {/* Verification Helper */}
+        {showVerificationHelper && Object.keys(autoFilledFields).length > 0 && (
+          <div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-6">
+            <div className="flex items-start justify-between gap-3">
+              <div className="flex items-start gap-3">
+                <CheckCircle className="w-5 h-5 text-green-600 mt-0.5" />
+                <div className="text-sm text-green-700">
+                  <p className="font-medium mb-1">Verification Guide:</p>
+                  <ul className="list-disc list-inside space-y-1 text-xs">
+                    <li>Yellow highlighted fields were auto-filled by OCR</li>
+                    <li>Click "✓ Correct" if the information is accurate</li>
+                    <li>Edit the field directly if corrections are needed</li>
+                    <li>All fields must be verified before saving</li>
+                  </ul>
+                </div>
+              </div>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setShowVerificationHelper(false)}
+                className="h-6 w-6 p-0"
+              >
+                <XCircle className="w-4 h-4" />
+              </Button>
+            </div>
+          </div>
+        )}
 
         <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="licenseNumber" className="flex items-center gap-2">
-              License Number * (Nepal Format)
-              {renderFieldIcon('licenseNumber')}
-            </Label>
-            <Input
-              id="licenseNumber"
-              value={licenseData.licenseNumber}
-              onChange={(e) => updateField('licenseNumber', e.target.value.toUpperCase())}
-              onBlur={() => handleBlur('licenseNumber')}
-              placeholder="e.g., 03-06-041605052 or 03060416050520"
-              required
-              disabled={disabled}
-              className={errors.licenseNumber?.length > 0 ? 'border-red-500' : ''}
-            />
-            {touched.licenseNumber && errors.licenseNumber?.map((error, index) => (
-              <p key={index} className="text-sm text-red-500">{error}</p>
-            ))}
-            <p className="text-xs text-gray-500">
-              Nepal license format: XX-XX-XXXXXXXXX (will be auto-formatted)
-            </p>
-          </div>
+          {renderFieldWithVerification(
+            'licenseNumber',
+            'License Number (Nepal Format)',
+            'e.g., 03-06-041605052',
+            true
+          )}
 
-          <div className="space-y-2">
-            <Label htmlFor="holderName" className="flex items-center gap-2">
-              Holder Name (As on License)
-              {renderFieldIcon('holderName')}
-            </Label>
-            <Input
-              id="holderName"
-              value={licenseData.holderName}
-              onChange={(e) => updateField('holderName', e.target.value)}
-              onBlur={() => handleBlur('holderName')}
-              placeholder="Full name as printed on Nepal license"
-              disabled={disabled}
-              className={errors.holderName?.length > 0 ? 'border-red-500' : ''}
-            />
-            {touched.holderName && errors.holderName?.map((error, index) => (
-              <p key={index} className="text-sm text-red-500">{error}</p>
-            ))}
-          </div>
+          {renderFieldWithVerification(
+            'holderName',
+            'Holder Name (As on License)',
+            'Full name as printed on Nepal license'
+          )}
 
           <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="issueDate" className="flex items-center gap-2">
-                Issue Date (Nepal Format)
-                {renderFieldIcon('issueDate')}
-              </Label>
-              <Input
-                id="issueDate"
-                type="date"
-                value={licenseData.issueDate}
-                onChange={(e) => updateField('issueDate', e.target.value)}
-                onBlur={() => handleBlur('issueDate')}
-                disabled={disabled}
-                className={errors.issueDate?.length > 0 ? 'border-red-500' : ''}
-              />
-              {touched.issueDate && errors.issueDate?.map((error, index) => (
-                <p key={index} className="text-sm text-red-500">{error}</p>
-              ))}
-              <p className="text-xs text-gray-500">Date when license was issued</p>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="expiryDate" className="flex items-center gap-2">
-                Expiry Date * (Nepal Format)
-                {renderFieldIcon('expiryDate')}
-              </Label>
-              <Input
-                id="expiryDate"
-                type="date"
-                value={licenseData.expiryDate}
-                onChange={(e) => updateField('expiryDate', e.target.value)}
-                onBlur={() => handleBlur('expiryDate')}
-                required
-                disabled={disabled}
-                className={errors.expiryDate?.length > 0 ? 'border-red-500' : ''}
-              />
-              {touched.expiryDate && errors.expiryDate?.map((error, index) => (
-                <p key={index} className="text-sm text-red-500">{error}</p>
-              ))}
-              <p className="text-xs text-gray-500">License expiration date</p>
-            </div>
+            {renderFieldWithVerification(
+              'issueDate',
+              'Issue Date (Nepal Format)',
+              'Date when license was issued',
+              false,
+              'date'
+            )}
+            {renderFieldWithVerification(
+              'expiryDate',
+              'Expiry Date (Nepal Format)',
+              'License expiration date',
+              true,
+              'date'
+            )}
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="issuingAuthority" className="flex items-center gap-2">
-              Issuing Authority (Nepal)
-              {renderFieldIcon('issuingAuthority')}
-            </Label>
-            <Input
-              id="issuingAuthority"
-              value={licenseData.issuingAuthority}
-              onChange={(e) => updateField('issuingAuthority', e.target.value)}
-              onBlur={() => handleBlur('issuingAuthority')}
-              disabled={disabled}
-              className={errors.issuingAuthority?.length > 0 ? 'border-red-500' : ''}
-              placeholder="Department of Transport Management, Government of Nepal"
-            />
-            {touched.issuingAuthority && errors.issuingAuthority?.map((error, index) => (
-              <p key={index} className="text-sm text-red-500">{error}</p>
-            ))}
-          </div>
+          {renderFieldWithVerification(
+            'issuingAuthority',
+            'Issuing Authority (Nepal)',
+            'Department of Transport Management, Government of Nepal'
+          )}
 
-          <div className="space-y-2">
-            <Label htmlFor="address" className="flex items-center gap-2">
-              Address (As on License)
-              {renderFieldIcon('address')}
-            </Label>
-            <Textarea
-              id="address"
-              value={licenseData.address}
-              onChange={(e) => updateField('address', e.target.value)}
-              onBlur={() => handleBlur('address')}
-              placeholder="Address as printed on Nepal license"
-              rows={3}
-              disabled={disabled}
-              className={errors.address?.length > 0 ? 'border-red-500' : ''}
-            />
-            {touched.address && errors.address?.map((error, index) => (
-              <p key={index} className="text-sm text-red-500">{error}</p>
-            ))}
-          </div>
+          {renderFieldWithVerification(
+            'address',
+            'Address (As on License)',
+            'Address as printed on Nepal license',
+            false,
+            'text',
+            true
+          )}
 
           <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
             <div className="flex items-start gap-3">
               <AlertCircle className="w-5 h-5 text-yellow-600 mt-0.5" />
               <div className="text-sm text-yellow-700">
-                <p className="font-medium">Please verify the extracted information</p>
-                <p>OCR may not be 100% accurate for Nepal licenses. Please review and correct any errors before saving.</p>
-                <p className="mt-1 text-xs">✓ License number format validated for Nepal standards</p>
+                <p className="font-medium">Please verify all auto-filled information</p>
+                <p>OCR technology has automatically extracted details from your Nepal license. Please check each field carefully and make corrections if needed.</p>
               </div>
             </div>
           </div>
