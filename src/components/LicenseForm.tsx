@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -31,17 +32,27 @@ const LicenseForm = ({
   const [verificationStatus, setVerificationStatus] = useState<Record<string, 'pending' | 'verified' | 'corrected'>>({});
   const [showVerificationHelper, setShowVerificationHelper] = useState(true);
 
-  // Track auto-filled fields when component mounts
+  // Track auto-filled fields when licenseData changes
   useEffect(() => {
+    console.log('LicenseForm: License data updated:', licenseData);
     const autoFilled: Record<string, boolean> = {};
+    const newVerificationStatus: Record<string, 'pending' | 'verified' | 'corrected'> = {};
+    
     Object.keys(licenseData).forEach(field => {
-      if (licenseData[field as keyof LicenseData] && licenseData[field as keyof LicenseData] !== '') {
+      const value = licenseData[field as keyof LicenseData];
+      if (value && value.trim() !== '') {
         autoFilled[field] = true;
-        setVerificationStatus(prev => ({ ...prev, [field]: 'pending' }));
+        newVerificationStatus[field] = 'pending';
+        console.log(`Auto-filled field detected: ${field} = ${value}`);
       }
     });
+    
     setAutoFilledFields(autoFilled);
-  }, []);
+    setVerificationStatus(newVerificationStatus);
+    
+    const autoFilledCount = Object.keys(autoFilled).length;
+    console.log(`Total auto-filled fields: ${autoFilledCount}`);
+  }, [licenseData]);
 
   const updateField = (field: keyof LicenseData, value: string) => {
     const sanitizedValue = sanitizeInput(value);
@@ -168,6 +179,9 @@ const LicenseForm = ({
     const isAutoFilled = autoFilledFields[field];
     const status = verificationStatus[field];
     const fieldError = errors[field];
+    const fieldValue = licenseData[field] || '';
+    
+    console.log(`Rendering field ${field}:`, { isAutoFilled, status, fieldValue });
     
     return (
       <div className="space-y-2">
@@ -202,7 +216,7 @@ const LicenseForm = ({
           {isTextarea ? (
             <Textarea
               id={field}
-              value={licenseData[field]}
+              value={fieldValue}
               onChange={(e) => updateField(field, e.target.value)}
               onBlur={() => handleBlur(field)}
               placeholder={placeholder}
@@ -216,7 +230,7 @@ const LicenseForm = ({
             <Input
               id={field}
               type={type}
-              value={licenseData[field]}
+              value={fieldValue}
               onChange={(e) => updateField(field, field === 'licenseNumber' ? e.target.value.toUpperCase() : e.target.value)}
               onBlur={() => handleBlur(field)}
               placeholder={placeholder}
@@ -248,25 +262,30 @@ const LicenseForm = ({
     );
   };
 
+  const autoFilledCount = Object.keys(autoFilledFields).length;
+
   return (
     <Card className={disabled ? 'opacity-60' : ''}>
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <FileText className="w-5 h-5" />
-          Nepal License Details - Auto-Filled
+          Nepal License Details {autoFilledCount > 0 ? `- ${autoFilledCount} Fields Auto-Filled` : ''}
         </CardTitle>
         <CardDescription>
-          OCR has automatically extracted information from your Nepal driving license. Please verify each field is correct.
+          {autoFilledCount > 0 
+            ? `OCR has automatically extracted ${autoFilledCount} field(s) from your Nepal driving license. Please verify each field is correct.`
+            : 'Please enter your Nepal driving license details manually.'
+          }
         </CardDescription>
       </CardHeader>
       <CardContent>
         {/* Auto-fill Status */}
-        {Object.keys(autoFilledFields).length > 0 && (
+        {autoFilledCount > 0 && (
           <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
             <div className="flex items-start gap-3">
               <Info className="w-5 h-5 text-blue-600 mt-0.5" />
               <div className="text-sm text-blue-700">
-                <p className="font-medium mb-2">Auto-Fill Status:</p>
+                <p className="font-medium mb-2">Auto-Fill Status ({autoFilledCount} fields found):</p>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-xs">
                   {Object.entries(autoFilledFields).map(([field, isAutoFilled]) => (
                     <div key={field} className="flex items-center gap-2">
@@ -289,7 +308,7 @@ const LicenseForm = ({
         )}
 
         {/* Verification Helper */}
-        {showVerificationHelper && Object.keys(autoFilledFields).length > 0 && (
+        {showVerificationHelper && autoFilledCount > 0 && (
           <div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-6">
             <div className="flex items-start justify-between gap-3">
               <div className="flex items-start gap-3">
@@ -362,15 +381,17 @@ const LicenseForm = ({
             true
           )}
 
-          <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-            <div className="flex items-start gap-3">
-              <AlertCircle className="w-5 h-5 text-yellow-600 mt-0.5" />
-              <div className="text-sm text-yellow-700">
-                <p className="font-medium">Please verify all auto-filled information</p>
-                <p>OCR technology has automatically extracted details from your Nepal license. Please check each field carefully and make corrections if needed.</p>
+          {autoFilledCount === 0 && (
+            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+              <div className="flex items-start gap-3">
+                <AlertCircle className="w-5 h-5 text-yellow-600 mt-0.5" />
+                <div className="text-sm text-yellow-700">
+                  <p className="font-medium">No auto-fill data detected</p>
+                  <p>Please enter your Nepal license details manually. Make sure to upload a clear image for better OCR results.</p>
+                </div>
               </div>
             </div>
-          </div>
+          )}
 
           <div className="flex gap-4 pt-4">
             <Button type="button" variant="outline" onClick={onCancel} disabled={disabled || isProcessing}>
