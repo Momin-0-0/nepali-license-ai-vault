@@ -1,3 +1,4 @@
+
 // Service Worker registration and management
 export const registerServiceWorker = async (): Promise<ServiceWorkerRegistration | null> => {
   if (!('serviceWorker' in navigator)) {
@@ -131,7 +132,7 @@ export const registerBackgroundSync = async (
 ): Promise<void> => {
   if ('sync' in registration) {
     try {
-      await registration.sync.register(tag);
+      await (registration as any).sync.register(tag);
       console.log('Background sync registered:', tag);
     } catch (error) {
       console.error('Background sync registration failed:', error);
