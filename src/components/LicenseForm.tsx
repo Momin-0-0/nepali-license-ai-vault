@@ -33,6 +33,13 @@ const LicenseForm = ({
   const [verificationStatus, setVerificationStatus] = useState<Record<string, 'pending' | 'verified' | 'corrected'>>({});
   const [showVerificationHelper, setShowVerificationHelper] = useState(true);
 
+  // Helper function to safely get field value as string
+  const getFieldValue = (field: keyof LicenseData): string => {
+    const value = licenseData[field];
+    if (value === undefined || value === null) return '';
+    return String(value);
+  };
+
   // Track auto-filled fields when licenseData changes
   useEffect(() => {
     console.log('LicenseForm: License data updated:', licenseData);
@@ -148,8 +155,8 @@ const LicenseForm = ({
 
   const handleBlur = (field: keyof LicenseData) => {
     setTouched(prev => ({ ...prev, [field]: true }));
-    const value = licenseData[field];
-    validateField(field, typeof value === 'string' ? value : value?.toString());
+    const value = getFieldValue(field);
+    validateField(field, value);
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -202,7 +209,7 @@ const LicenseForm = ({
     const isAutoFilled = autoFilledFields[field];
     const status = verificationStatus[field];
     const fieldError = errors[field];
-    const fieldValue = licenseData[field] || '';
+    const fieldValue = getFieldValue(field);
     
     return (
       <div className="space-y-2">
@@ -236,7 +243,7 @@ const LicenseForm = ({
         <div className="relative">
           {isSelect ? (
             <Select 
-              value={fieldValue.toString()} 
+              value={fieldValue} 
               onValueChange={(value) => updateField(field, value)}
               disabled={disabled}
             >
@@ -256,7 +263,7 @@ const LicenseForm = ({
           ) : isTextarea ? (
             <Textarea
               id={field}
-              value={fieldValue.toString()}
+              value={fieldValue}
               onChange={(e) => updateField(field, e.target.value)}
               onBlur={() => handleBlur(field)}
               placeholder={placeholder}
@@ -270,7 +277,7 @@ const LicenseForm = ({
             <Input
               id={field}
               type={type}
-              value={fieldValue.toString()}
+              value={fieldValue}
               onChange={(e) => updateField(field, field === 'licenseNumber' ? e.target.value.toUpperCase() : e.target.value)}
               onBlur={() => handleBlur(field)}
               placeholder={placeholder}
