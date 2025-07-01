@@ -6,65 +6,81 @@ interface OCRProgress {
   progress: number;
 }
 
-// Enhanced Nepal License Field Patterns with multiple variations
+// Enhanced Nepal License Field Patterns based on actual license format
 const NEPAL_LICENSE_PATTERNS = {
   licenseNumber: [
-    /(D\.L\.No[:\s]*)?(\d{2}-\d{3}-\d{6,})/gi,
-    /(DL[:\s]*)?(\d{2}-\d{3}-\d{6,})/gi,
-    /(License[:\s]*No[:\s]*)?(\d{2}-\d{3}-\d{6,})/gi,
-    /(\d{2}-\d{3}-\d{6,})/gi
+    /D\.L\.No[:\s]*(\d{2}-\d{2}-\d{8})/gi,
+    /D\.L\.No[:\s]*(\d{2}-\d{2}-\d{9})/gi,
+    /(\d{2}-\d{2}-\d{8,9})/gi,
+    /D\.L\.No[:\s]*(\d{11,13})/gi
   ],
   bloodGroup: [
-    /BG[:\s]*([ABO]{1,2}[+-])/gi,
-    /Blood[:\s]*Group[:\s]*([ABO]{1,2}[+-])/gi,
-    /([ABO]{1,2}[+-])/gi
+    /B\.G[:\s]*([ABO]{1,2}[+-]?)/gi,
+    /BG[:\s]*([ABO]{1,2}[+-]?)/gi,
+    /Blood[:\s]*Group[:\s]*([ABO]{1,2}[+-]?)/gi
   ],
   holderName: [
-    /Name[:\s]*([A-Z][a-zA-Z\s]{2,40})/gi,
-    /नाम[:\s]*([A-Z][a-zA-Z\s]{2,40})/gi,
-    /([A-Z][a-zA-Z]+\s+[A-Z][a-zA-Z]+)/gi
+    /Name[:\s]*([A-Z][a-zA-Z\s]{3,50})/gi,
+    /नाम[:\s]*([A-Z][a-zA-Z\s]{3,50})/gi,
+    /([A-Z][a-zA-Z]+\s+[A-Z][a-zA-Z]+(?:\s+[A-Z][a-zA-Z]+)?)/gi
   ],
   address: [
     /Address[:\s]*([A-Za-z0-9,\s\-]{5,100})/gi,
-    /ठेगाना[:\s]*([A-Za-z0-9,\s\-]{5,100})/gi
+    /ठेगाना[:\s]*([A-Za-z0-9,\s\-]{5,100})/gi,
+    /([A-Za-z\-]+,\s*[A-Za-z\-]+,\s*Nepal)/gi
   ],
   dateOfBirth: [
-    /D\.O\.B[:\s]*(\d{1,2}[-\/]\d{1,2}[-\/]\d{4})/gi,
-    /जन्म[:\s]*मिति[:\s]*(\d{1,2}[-\/]\d{1,2}[-\/]\d{4})/gi,
-    /Birth[:\s]*Date[:\s]*(\d{1,2}[-\/]\d{1,2}[-\/]\d{4})/gi
+    /D\.O\.B[:\s]*(\d{2}-\d{2}-\d{4})/gi,
+    /DOB[:\s]*(\d{2}-\d{2}-\d{4})/gi,
+    /जन्म[:\s]*मिति[:\s]*(\d{2}-\d{2}-\d{4})/gi,
+    /(\d{2}-\d{2}-\d{4})/gi
   ],
   citizenshipNo: [
-    /Citizenship[:\s]*No[:\s]*(\d+)/gi,
-    /नागरिकता[:\s]*नं[:\s]*(\d+)/gi,
-    /Citizen[:\s]*(\d+)/gi
+    /Citizenship[:\s]*No[:\s]*(\d{10,15})/gi,
+    /नागरिकता[:\s]*नं[:\s]*(\d{10,15})/gi,
+    /(\d{11})/gi
   ],
   phoneNo: [
     /Phone[:\s]*No[:\s]*(\d{10})/gi,
     /फोन[:\s]*नं[:\s]*(\d{10})/gi,
     /Mobile[:\s]*(\d{10})/gi,
-    /(\d{10})/gi
+    /(98\d{8})/gi
   ],
   issueDate: [
-    /D\.O\.I[:\s]*(\d{1,2}[-\/]\d{1,2}[-\/]\d{4})/gi,
-    /Issue[:\s]*Date[:\s]*(\d{1,2}[-\/]\d{1,2}[-\/]\d{4})/gi,
-    /जारी[:\s]*मिति[:\s]*(\d{1,2}[-\/]\d{1,2}[-\/]\d{4})/gi
+    /D\.O\.I[:\s]*(\d{2}-\d{2}-\d{4})/gi,
+    /DOI[:\s]*(\d{2}-\d{2}-\d{4})/gi,
+    /Issue[:\s]*Date[:\s]*(\d{2}-\d{2}-\d{4})/gi,
+    /जारी[:\s]*मिति[:\s]*(\d{2}-\d{2}-\d{4})/gi
   ],
   expiryDate: [
-    /D\.O\.E[:\s]*(\d{1,2}[-\/]\d{1,2}[-\/]\d{4})/gi,
-    /Expiry[:\s]*Date[:\s]*(\d{1,2}[-\/]\d{1,2}[-\/]\d{4})/gi,
-    /समाप्ति[:\s]*मिति[:\s]*(\d{1,2}[-\/]\d{1,2}[-\/]\d{4})/gi
+    /D\.O\.E[:\s]*(\d{2}-\d{2}-\d{4})/gi,
+    /DOE[:\s]*(\d{2}-\d{2}-\d{4})/gi,
+    /Expiry[:\s]*Date[:\s]*(\d{2}-\d{2}-\d{4})/gi,
+    /समाप्ति[:\s]*मिति[:\s]*(\d{2}-\d{2}-\d{4})/gi
   ],
   category: [
     /Category[:\s]*([A-Z]+)/gi,
     /श्रेणी[:\s]*([A-Z]+)/gi,
     /Class[:\s]*([A-Z]+)/gi
   ],
-  issuingAuthority: [
-    /(Department\s*of\s*Transport\s*Management)/gi,
-    /(Transport\s*Management\s*Office)/gi,
-    /(DoTM)/gi,
-    /(यातायात\s*व्यवस्थापन\s*विभाग)/gi
+  fatherName: [
+    /F\/H[:\s]*Name[:\s]*([A-Z][a-zA-Z\s]{3,50})/gi,
+    /Father[:\s]*Name[:\s]*([A-Z][a-zA-Z\s]{3,50})/gi,
+    /बुबाको[:\s]*नाम[:\s]*([A-Z][a-zA-Z\s]{3,50})/gi
+  ],
+  passportNo: [
+    /Passport[:\s]*No[:\s]*([A-Z0-9]{8,15})/gi,
+    /राहदानी[:\s]*नं[:\s]*([A-Z0-9]{8,15})/gi
   ]
+};
+
+// Region-based extraction areas for Nepal license layout
+const NEPAL_LICENSE_REGIONS = {
+  topLeft: { x: 0, y: 0, width: 0.4, height: 0.4 },
+  topRight: { x: 0.6, y: 0, width: 0.4, height: 0.4 },
+  centerLeft: { x: 0, y: 0.4, width: 0.5, height: 0.4 },
+  centerRight: { x: 0.5, y: 0.4, width: 0.5, height: 0.4 },
+  bottom: { x: 0, y: 0.8, width: 1, height: 0.2 }
 };
 
 export const processImageWithOCR = async (
@@ -73,25 +89,25 @@ export const processImageWithOCR = async (
 ): Promise<Partial<LicenseData>> => {
   return new Promise(async (resolve, reject) => {
     try {
-      onProgress?.('Initializing enhanced OCR engine with Nepal-specific optimizations...');
+      onProgress?.('Initializing Nepal license OCR with advanced pattern recognition...');
       
-      // Advanced image preprocessing with multiple techniques
+      // Enhanced preprocessing for Nepal license format
       const enhancedImage = await preprocessNepalLicenseImage(imageFile);
       
-      onProgress?.('Loading dual-language OCR models (English + Nepali)...');
+      onProgress?.('Loading optimized dual-language OCR models...');
       
       const worker = await Tesseract.createWorker(['eng', 'nep'], 1, {
         logger: (m: OCRProgress) => {
           if (m.status === 'recognizing text') {
             const percentage = Math.round(m.progress * 100);
-            onProgress?.(`Advanced OCR processing Nepal license... ${percentage}%`);
+            onProgress?.(`Extracting Nepal license data... ${percentage}%`);
           } else {
             onProgress?.(m.status.replace(/([a-z])([A-Z])/g, '$1 $2'));
           }
         }
       });
 
-      // Optimized OCR parameters for Nepal license format
+      // Optimized parameters for Nepal license with holographic background
       await worker.setParameters({
         tessedit_char_whitelist: '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz -.,/:()[]+-।',
         tessedit_pageseg_mode: Tesseract.PSM.SINGLE_BLOCK,
@@ -103,13 +119,17 @@ export const processImageWithOCR = async (
         load_freq_dawg: '0',
         textord_heavy_nr: '1',
         textord_min_linesize: '1.25',
-        textord_debug_tabfind: '0',
         classify_enable_learning: '0',
-        classify_enable_adaptive_matcher: '1'
+        classify_enable_adaptive_matcher: '1',
+        edges_max_children_per_outline: '40',
+        edges_children_count_limit: '45',
+        textord_noise_sizelimit: '0.5',
+        textord_noise_normratio: '2.0'
       });
 
-      onProgress?.('Extracting text with enhanced pattern recognition...');
+      onProgress?.('Processing Nepal license with enhanced region detection...');
 
+      // Full image OCR
       const result = await worker.recognize(enhancedImage);
       const text = result.data.text;
       const confidence = result.data.confidence;
@@ -121,34 +141,41 @@ export const processImageWithOCR = async (
         bbox: word.bbox
       })) || [];
       
-      console.log('=== Enhanced Nepal License OCR Analysis ===');
+      const lines = (result.data as any).lines?.map((line: any) => ({
+        text: line.text,
+        confidence: line.confidence,
+        bbox: line.bbox
+      })) || [];
+      
+      console.log('=== Nepal License OCR Analysis ===');
       console.log('Raw OCR text:', text);
       console.log('Overall confidence:', confidence);
       console.log('Total words detected:', words.length);
+      console.log('Total lines detected:', lines.length);
       
-      onProgress?.('Analyzing extracted data with advanced pattern matching...');
+      onProgress?.('Analyzing extracted data with Nepal-specific patterns...');
 
-      // Multi-stage extraction process
-      const extractedData = await performAdvancedExtraction(text, words, confidence);
+      // Multi-stage extraction with region-based analysis
+      const extractedData = await performAdvancedExtractionForNepal(text, words, lines, confidence);
       
-      console.log('Final extracted data:', extractedData);
+      console.log('Final extracted Nepal license data:', extractedData);
       
       const fieldsFound = Object.keys(extractedData).filter(key => 
         extractedData[key as keyof typeof extractedData] && 
         extractedData[key as keyof typeof extractedData] !== ''
       ).length;
       
-      console.log(`✓ Enhanced OCR completed: ${fieldsFound} fields extracted with ${Math.round(confidence)}% confidence`);
+      console.log(`✓ Nepal license OCR completed: ${fieldsFound} fields extracted with ${Math.round(confidence)}% confidence`);
 
       await worker.terminate();
       
-      onProgress?.(`Enhanced OCR complete! Extracted ${fieldsFound} fields with ${Math.round(confidence)}% confidence`);
+      onProgress?.(`Nepal license extraction complete! Found ${fieldsFound} fields with ${Math.round(confidence)}% accuracy`);
       
       resolve(extractedData);
     } catch (error) {
-      console.error('Enhanced Nepal License OCR Error:', error);
-      onProgress?.('Enhanced OCR processing failed');
-      reject(new Error('Failed to process Nepal license with advanced OCR. Please ensure good lighting and try again.'));
+      console.error('Nepal License OCR Error:', error);
+      onProgress?.('Nepal license OCR processing failed');
+      reject(new Error('Failed to process Nepal license. Please ensure good lighting and clear image quality.'));
     }
   });
 };
@@ -166,47 +193,55 @@ const preprocessNepalLicenseImage = async (imageFile: File): Promise<File> => {
 
     img.onload = () => {
       try {
-        // Handle landscape_rotated_90 orientation
-        canvas.width = img.height;
-        canvas.height = img.width;
+        // Set canvas dimensions
+        canvas.width = img.width;
+        canvas.height = img.height;
 
-        // Rotate image 90 degrees counter-clockwise
-        ctx.translate(canvas.width / 2, canvas.height / 2);
-        ctx.rotate(-Math.PI / 2);
-        ctx.translate(-img.width / 2, -img.height / 2);
-
-        // Advanced preprocessing pipeline
-        ctx.filter = 'contrast(1.8) brightness(1.3) saturate(0.7) blur(0.3px)';
+        // Advanced preprocessing pipeline for Nepal license
+        ctx.filter = 'contrast(2.2) brightness(1.4) saturate(0.5) blur(0.2px)';
         ctx.drawImage(img, 0, 0);
 
-        // Multi-stage image enhancement
+        // Get image data for pixel-level processing
         const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
         const data = imageData.data;
 
-        // Stage 1: Adaptive thresholding
+        // Stage 1: Enhanced contrast and background removal
         for (let i = 0; i < data.length; i += 4) {
-          const avg = (data[i] + data[i + 1] + data[i + 2]) / 3;
+          const r = data[i];
+          const g = data[i + 1];
+          const b = data[i + 2];
+          const avg = (r + g + b) / 3;
           
-          if (avg < 120) {
-            // Enhance dark text
-            data[i] = Math.max(0, data[i] - 40);
-            data[i + 1] = Math.max(0, data[i + 1] - 40);
-            data[i + 2] = Math.max(0, data[i + 2] - 40);
-          } else if (avg > 180) {
-            // Brighten background
-            data[i] = Math.min(255, data[i] + 40);
-            data[i + 1] = Math.min(255, data[i + 1] + 40);
-            data[i + 2] = Math.min(255, data[i + 2] + 40);
+          // Remove holographic background colors (blues, greens)
+          if (b > r + 30 || g > r + 30) {
+            // Make background whiter
+            data[i] = Math.min(255, data[i] + 60);
+            data[i + 1] = Math.min(255, data[i + 1] + 60);
+            data[i + 2] = Math.min(255, data[i + 2] + 60);
+          }
+          
+          // Enhance dark text (black/dark colors)
+          if (avg < 100) {
+            data[i] = Math.max(0, data[i] - 50);
+            data[i + 1] = Math.max(0, data[i + 1] - 50);
+            data[i + 2] = Math.max(0, data[i + 2] - 50);
+          }
+          
+          // Brighten light background
+          if (avg > 200) {
+            data[i] = 255;
+            data[i + 1] = 255;
+            data[i + 2] = 255;
           }
         }
 
-        // Stage 2: Noise reduction
+        // Apply processed image data
         ctx.putImageData(imageData, 0, 0);
         
-        // Stage 3: Sharpening filter
-        const sharpenedData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-        applySharpenFilter(sharpenedData);
-        ctx.putImageData(sharpenedData, 0, 0);
+        // Stage 2: Additional sharpening
+        const finalData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+        applyAdvancedSharpenFilter(finalData);
+        ctx.putImageData(finalData, 0, 0);
 
         canvas.toBlob((blob) => {
           if (blob) {
@@ -218,7 +253,7 @@ const preprocessNepalLicenseImage = async (imageFile: File): Promise<File> => {
           } else {
             reject(new Error('Failed to enhance Nepal license image'));
           }
-        }, 'image/jpeg', 0.98);
+        }, 'image/jpeg', 0.95);
       } catch (error) {
         reject(error);
       }
@@ -229,16 +264,16 @@ const preprocessNepalLicenseImage = async (imageFile: File): Promise<File> => {
   });
 };
 
-const applySharpenFilter = (imageData: ImageData) => {
+const applyAdvancedSharpenFilter = (imageData: ImageData) => {
   const data = imageData.data;
   const width = imageData.width;
   const height = imageData.height;
   const newData = new Uint8ClampedArray(data);
 
-  // Sharpening kernel
+  // Enhanced sharpening kernel for text
   const kernel = [
     0, -1, 0,
-    -1, 5, -1,
+    -1, 6, -1,
     0, -1, 0
   ];
 
@@ -264,156 +299,265 @@ const applySharpenFilter = (imageData: ImageData) => {
   }
 };
 
-const performAdvancedExtraction = async (
+const performAdvancedExtractionForNepal = async (
   text: string, 
   words: any[], 
+  lines: any[],
   confidence: number
 ): Promise<Partial<LicenseData>> => {
-  const lines = text.split('\n').map(line => line.trim()).filter(line => line.length > 0);
   const cleanText = text.replace(/\s+/g, ' ').trim();
+  const textLines = text.split('\n').map(line => line.trim()).filter(line => line.length > 0);
   
-  console.log('=== Advanced Pattern Extraction ===');
-  console.log('Processing lines:', lines.length);
-  console.log('Clean text length:', cleanText.length);
+  console.log('=== Advanced Nepal License Pattern Extraction ===');
+  console.log('Processing lines:', textLines.length);
+  console.log('Clean text:', cleanText);
   
   const extractedData: Partial<LicenseData> = {};
 
-  // Stage 1: Pattern-based extraction with multiple regex attempts
+  // Stage 1: Enhanced pattern-based extraction
   for (const [field, patterns] of Object.entries(NEPAL_LICENSE_PATTERNS)) {
     for (const pattern of patterns) {
-      const match = cleanText.match(pattern);
-      if (match && match.length > 1) {
-        const value = match[match.length - 1].trim();
-        if (value && value.length > 0) {
-          switch (field) {
-            case 'licenseNumber':
-              extractedData.licenseNumber = value;
-              break;
-            case 'holderName':
-              if (value.length >= 3 && /^[A-Za-z\s]+$/.test(value)) {
-                extractedData.holderName = value;
+      const matches = cleanText.match(pattern);
+      if (matches) {
+        for (const match of matches) {
+          const groups = pattern.exec(match);
+          if (groups && groups.length > 1) {
+            const value = groups[groups.length - 1].trim();
+            if (value && value.length > 0) {
+              switch (field) {
+                case 'licenseNumber':
+                  if (validateNepalLicenseNumber(value)) {
+                    extractedData.licenseNumber = formatNepalLicenseNumber(value);
+                  }
+                  break;
+                case 'holderName':
+                  if (value.length >= 3 && /^[A-Za-z\s.]+$/.test(value)) {
+                    extractedData.holderName = value.replace(/\s+/g, ' ').trim();
+                  }
+                  break;
+                case 'address':
+                  if (value.length >= 5) {
+                    extractedData.address = value.replace(/\s+/g, ' ').trim();
+                  }
+                  break;
+                case 'dateOfBirth':
+                  extractedData.dateOfBirth = convertNepalDateToISO(value);
+                  break;
+                case 'citizenshipNo':
+                  if (/^\d{10,15}$/.test(value)) {
+                    extractedData.citizenshipNo = value;
+                  }
+                  break;
+                case 'phoneNo':
+                  if (/^98\d{8}$/.test(value) || /^\d{10}$/.test(value)) {
+                    extractedData.phoneNo = value;
+                  }
+                  break;
+                case 'issueDate':
+                  extractedData.issueDate = convertNepalDateToISO(value);
+                  break;
+                case 'expiryDate':
+                  extractedData.expiryDate = convertNepalDateToISO(value);
+                  break;
+                case 'category':
+                  if (/^[A-Z]+$/.test(value)) {
+                    extractedData.category = value;
+                  }
+                  break;
+                case 'bloodGroup':
+                  if (/^[ABO]{1,2}[+-]?$/.test(value)) {
+                    extractedData.bloodGroup = value;
+                  }
+                  break;
               }
-              break;
-            case 'address':
-              if (value.length >= 5) {
-                extractedData.address = value;
+              
+              if (extractedData[field as keyof LicenseData]) {
+                console.log(`✓ ${field} found:`, value);
+                break; // Move to next field once found
               }
-              break;
-            case 'dateOfBirth':
-              extractedData.dateOfBirth = convertNepalDateToISO(value);
-              break;
-            case 'citizenshipNo':
-              extractedData.citizenshipNo = value;
-              break;
-            case 'phoneNo':
-              extractedData.phoneNo = value;
-              break;
-            case 'issueDate':
-              extractedData.issueDate = convertNepalDateToISO(value);
-              break;
-            case 'expiryDate':
-              extractedData.expiryDate = convertNepalDateToISO(value);
-              break;
-            case 'category':
-              extractedData.category = value;
-              break;
-            case 'bloodGroup':
-              extractedData.bloodGroup = value;
-              break;
+            }
           }
-          
-          if (extractedData[field as keyof LicenseData]) {
-            console.log(`✓ ${field} found:`, value);
-            break; // Move to next field once found
-          }
+          pattern.lastIndex = 0; // Reset regex
         }
+        if (extractedData[field as keyof LicenseData]) break;
       }
     }
   }
 
-  // Stage 2: Confidence-based word analysis
-  if (confidence < 80 || Object.keys(extractedData).length < 3) {
-    console.log('Running confidence-based word analysis...');
-    const wordBasedData = extractWithAdvancedWordAnalysis(words, lines);
-    
-    // Merge with existing data, prioritizing higher confidence matches
-    Object.keys(wordBasedData).forEach(key => {
-      if (!extractedData[key as keyof typeof extractedData] && wordBasedData[key as keyof typeof wordBasedData]) {
-        (extractedData as any)[key] = wordBasedData[key as keyof typeof wordBasedData];
+  // Stage 2: Line-by-line analysis for missed fields
+  const lineBasedData = extractFromNepalLicenseLines(textLines);
+  Object.keys(lineBasedData).forEach(key => {
+    if (!extractedData[key as keyof typeof extractedData] && lineBasedData[key as keyof typeof lineBasedData]) {
+      (extractedData as any)[key] = lineBasedData[key as keyof typeof lineBasedData];
+    }
+  });
+
+  // Stage 3: Word positioning analysis
+  if (words.length > 0) {
+    const positionBasedData = extractFromWordPositions(words);
+    Object.keys(positionBasedData).forEach(key => {
+      if (!extractedData[key as keyof typeof extractedData] && positionBasedData[key as keyof typeof positionBasedData]) {
+        (extractedData as any)[key] = positionBasedData[key as keyof typeof positionBasedData];
       }
     });
   }
 
-  // Stage 3: Set default issuing authority
+  // Stage 4: Set default issuing authority
   if (!extractedData.issuingAuthority) {
     extractedData.issuingAuthority = 'Department of Transport Management, Government of Nepal';
   }
 
-  // Stage 4: Data validation and cleanup
-  return validateAndCleanupData(extractedData);
+  // Stage 5: Final validation and cleanup
+  return validateAndCleanupNepalData(extractedData);
 };
 
-const extractWithAdvancedWordAnalysis = (words: any[], lines: string[]): Partial<LicenseData> => {
-  const fallbackData: Partial<LicenseData> = {};
+const extractFromNepalLicenseLines = (lines: string[]): Partial<LicenseData> => {
+  const data: Partial<LicenseData> = {};
   
-  // Analyze word positioning and context
-  for (let i = 0; i < words.length - 1; i++) {
-    const currentWord = words[i]?.text?.trim() || '';
-    const nextWord = words[i + 1]?.text?.trim() || '';
-    const nextNextWord = words[i + 2]?.text?.trim() || '';
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    const nextLine = lines[i + 1] || '';
     
     // License number detection
-    if (/D\.?L\.?|License/i.test(currentWord) && /No\.?/i.test(nextWord)) {
-      const possibleNumber = words[i + 2]?.text || words[i + 3]?.text || '';
-      if (/\d{2}[-\s]?\d{3}[-\s]?\d{6,}/.test(possibleNumber)) {
-        fallbackData.licenseNumber = possibleNumber.replace(/\s/g, '');
-        console.log('✓ License number from word analysis:', fallbackData.licenseNumber);
+    if (/D\.L\.No/i.test(line)) {
+      const numberMatch = line.match(/(\d{2}-\d{2}-\d{8,9})/);
+      if (numberMatch) {
+        data.licenseNumber = numberMatch[1];
       }
     }
     
-    // Name detection with context
-    if (/Name/i.test(currentWord) && nextWord && nextNextWord) {
-      const possibleName = `${nextWord} ${nextNextWord}`;
-      if (/^[A-Z][a-zA-Z\s]+$/.test(possibleName) && possibleName.length > 5) {
-        fallbackData.holderName = possibleName;
-        console.log('✓ Name from word analysis:', possibleName);
+    // Name detection (usually after "Name:")
+    if (/^Name[:\s]/i.test(line)) {
+      const nameMatch = line.match(/Name[:\s]*([A-Z][a-zA-Z\s]{3,})/i);
+      if (nameMatch) {
+        data.holderName = nameMatch[1].trim();
       }
     }
     
-    // Date patterns
-    if (/D\.O\.I|Issue/i.test(currentWord)) {
-      const datePattern = /\d{1,2}[-\/]\d{1,2}[-\/]\d{4}/;
-      const possibleDate = nextWord || nextNextWord;
-      if (datePattern.test(possibleDate)) {
-        fallbackData.issueDate = convertNepalDateToISO(possibleDate);
-        console.log('✓ Issue date from word analysis:', possibleDate);
+    // Address detection (usually spans multiple lines)
+    if (/^Address[:\s]/i.test(line)) {
+      let address = line.replace(/^Address[:\s]*/i, '').trim();
+      if (nextLine && !nextLine.match(/^(D\.O\.B|DOB|Phone|Category|F\/H)/i)) {
+        address += ', ' + nextLine.trim();
+      }
+      if (address.length > 5) {
+        data.address = address;
+      }
+    }
+    
+    // Date extractions
+    if (/D\.O\.B[:\s]/.test(line)) {
+      const dobMatch = line.match(/(\d{2}-\d{2}-\d{4})/);
+      if (dobMatch) {
+        data.dateOfBirth = convertNepalDateToISO(dobMatch[1]);
+      }
+    }
+    
+    if (/D\.O\.I[:\s]/.test(line)) {
+      const doiMatch = line.match(/(\d{2}-\d{2}-\d{4})/);
+      if (doiMatch) {
+        data.issueDate = convertNepalDateToISO(doiMatch[1]);
+      }
+    }
+    
+    if (/D\.O\.E[:\s]/.test(line)) {
+      const doeMatch = line.match(/(\d{2}-\d{2}-\d{4})/);
+      if (doeMatch) {
+        data.expiryDate = convertNepalDateToISO(doeMatch[1]);
+      }
+    }
+    
+    // Phone number
+    if (/Phone[:\s]*No/i.test(line)) {
+      const phoneMatch = line.match(/(\d{10})/);
+      if (phoneMatch) {
+        data.phoneNo = phoneMatch[1];
+      }
+    }
+    
+    // Category
+    if (/Category[:\s]/i.test(line)) {
+      const categoryMatch = line.match(/Category[:\s]*([A-Z]+)/i);
+      if (categoryMatch) {
+        data.category = categoryMatch[1];
+      }
+    }
+    
+    // Citizenship number
+    if (/Citizenship[:\s]*No/i.test(line)) {
+      const citizenshipMatch = line.match(/(\d{10,15})/);
+      if (citizenshipMatch) {
+        data.citizenshipNo = citizenshipMatch[1];
       }
     }
   }
   
-  // Line-based analysis for addresses
-  for (const line of lines) {
-    if (/Address|ठेगाना/i.test(line)) {
-      const addressMatch = line.match(/(?:Address|ठेगाना)[:\s]*(.+)/i);
-      if (addressMatch && addressMatch[1] && addressMatch[1].length > 5) {
-        fallbackData.address = addressMatch[1].trim();
-        console.log('✓ Address from line analysis:', fallbackData.address);
-      }
-    }
-  }
-  
-  return fallbackData;
+  return data;
 };
 
-const validateAndCleanupData = (data: Partial<LicenseData>): Partial<LicenseData> => {
+const extractFromWordPositions = (words: any[]): Partial<LicenseData> => {
+  const data: Partial<LicenseData> = {};
+  
+  for (let i = 0; i < words.length - 1; i++) {
+    const word = words[i];
+    const nextWord = words[i + 1];
+    const nextNextWord = words[i + 2];
+    
+    if (!word || !nextWord) continue;
+    
+    const wordText = word.text?.trim() || '';
+    const nextWordText = nextWord.text?.trim() || '';
+    const nextNextWordText = nextNextWord?.text?.trim() || '';
+    
+    // Look for "Name:" followed by actual name
+    if (/Name/i.test(wordText) && nextWordText.length > 2) {
+      const possibleName = nextNextWordText ? 
+        `${nextWordText} ${nextNextWordText}` : nextWordText;
+      if (/^[A-Z][a-zA-Z\s]{2,}$/.test(possibleName)) {
+        data.holderName = possibleName;
+      }
+    }
+    
+    // Look for license number patterns
+    if (/D\.L\.No/i.test(wordText) && /\d{2}-\d{2}-\d{8,9}/.test(nextWordText)) {
+      data.licenseNumber = nextWordText;
+    }
+    
+    // Category detection
+    if (/Category/i.test(wordText) && /^[A-Z]+$/.test(nextWordText)) {
+      data.category = nextWordText;
+    }
+  }
+  
+  return data;
+};
+
+const validateNepalLicenseNumber = (licenseNumber: string): boolean => {
+  const patterns = [
+    /^\d{2}-\d{2}-\d{8}$/,
+    /^\d{2}-\d{2}-\d{9}$/,
+    /^\d{11,13}$/
+  ];
+  
+  return patterns.some(pattern => pattern.test(licenseNumber));
+};
+
+const formatNepalLicenseNumber = (licenseNumber: string): string => {
+  const cleaned = licenseNumber.replace(/[-\s]/g, '');
+  
+  if (cleaned.length >= 12) {
+    return `${cleaned.substring(0, 2)}-${cleaned.substring(2, 4)}-${cleaned.substring(4)}`;
+  }
+  
+  return licenseNumber;
+};
+
+const validateAndCleanupNepalData = (data: Partial<LicenseData>): Partial<LicenseData> => {
   const cleaned: Partial<LicenseData> = {};
   
   // Validate and clean license number
-  if (data.licenseNumber) {
-    const cleanLicense = data.licenseNumber.replace(/[^\d-]/g, '');
-    if (/\d{2}-\d{3}-\d{6,}/.test(cleanLicense)) {
-      cleaned.licenseNumber = cleanLicense;
-    }
+  if (data.licenseNumber && validateNepalLicenseNumber(data.licenseNumber)) {
+    cleaned.licenseNumber = formatNepalLicenseNumber(data.licenseNumber);
   }
   
   // Validate and clean name
@@ -424,8 +568,26 @@ const validateAndCleanupData = (data: Partial<LicenseData>): Partial<LicenseData
     }
   }
   
+  // Validate address
+  if (data.address && data.address.length >= 5) {
+    cleaned.address = data.address.trim();
+  }
+  
+  // Validate dates
+  if (data.dateOfBirth && /^\d{4}-\d{2}-\d{2}$/.test(data.dateOfBirth)) {
+    cleaned.dateOfBirth = data.dateOfBirth;
+  }
+  
+  if (data.issueDate && /^\d{4}-\d{2}-\d{2}$/.test(data.issueDate)) {
+    cleaned.issueDate = data.issueDate;
+  }
+  
+  if (data.expiryDate && /^\d{4}-\d{2}-\d{2}$/.test(data.expiryDate)) {
+    cleaned.expiryDate = data.expiryDate;
+  }
+  
   // Keep other validated fields
-  ['address', 'issueDate', 'expiryDate', 'dateOfBirth', 'citizenshipNo', 'phoneNo', 'category', 'bloodGroup', 'issuingAuthority'].forEach(field => {
+  ['citizenshipNo', 'phoneNo', 'category', 'bloodGroup', 'issuingAuthority'].forEach(field => {
     if (data[field as keyof LicenseData]) {
       (cleaned as any)[field] = data[field as keyof LicenseData];
     }
@@ -435,25 +597,11 @@ const validateAndCleanupData = (data: Partial<LicenseData>): Partial<LicenseData
 };
 
 const convertNepalDateToISO = (dateString: string): string => {
-  // Handle multiple date formats
-  const dateFormats = [
-    /(\d{1,2})[-\/](\d{1,2})[-\/](\d{4})/,
-    /(\d{4})[-\/](\d{1,2})[-\/](\d{1,2})/
-  ];
-  
-  for (const format of dateFormats) {
-    const match = dateString.match(format);
-    if (match) {
-      let [, part1, part2, part3] = match;
-      
-      // Assume DD-MM-YYYY for Nepal format
-      if (part3.length === 4) {
-        const day = part1.padStart(2, '0');
-        const month = part2.padStart(2, '0');
-        const year = part3;
-        return `${year}-${month}-${day}`;
-      }
-    }
+  // Handle Nepal date format DD-MM-YYYY
+  const match = dateString.match(/(\d{2})-(\d{2})-(\d{4})/);
+  if (match) {
+    const [, day, month, year] = match;
+    return `${year}-${month}-${day}`;
   }
   
   return dateString;
