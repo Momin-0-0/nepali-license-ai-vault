@@ -42,11 +42,11 @@ export const processImageWithOCR = async (
 
       const result = await worker.recognize(enhancedImage);
       const text = result.data.text;
-      // Fix: Access words through symbols or handle undefined case
-      const words = result.data.symbols?.map(symbol => ({
-        text: symbol.text,
-        confidence: symbol.confidence,
-        bbox: symbol.bbox
+      // Fix: Access word-level data through the correct Tesseract API structure
+      const words = result.data.words?.map(word => ({
+        text: word.text,
+        confidence: word.confidence,
+        bbox: word.bbox
       })) || [];
       
       console.log('=== Modern Nepal License OCR Analysis ===');
