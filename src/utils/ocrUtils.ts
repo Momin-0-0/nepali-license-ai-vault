@@ -42,8 +42,8 @@ export const processImageWithOCR = async (
 
       const result = await worker.recognize(enhancedImage);
       const text = result.data.text;
-      // Fix: Access word-level data through the correct Tesseract API structure
-      const words = result.data.words?.map(word => ({
+      // Fix: Use type assertion to access word-level data safely
+      const words = (result.data as any).words?.map((word: any) => ({
         text: word.text,
         confidence: word.confidence,
         bbox: word.bbox
@@ -51,7 +51,7 @@ export const processImageWithOCR = async (
       
       console.log('=== Modern Nepal License OCR Analysis ===');
       console.log('Raw OCR text:', text);
-      console.log('Word-level data:', words.map(w => ({ text: w.text, confidence: w.confidence, bbox: w.bbox })));
+      console.log('Word-level data:', words.map((w: any) => ({ text: w.text, confidence: w.confidence, bbox: w.bbox })));
       
       onProgress?.('Analyzing extracted data with advanced algorithms...');
 
@@ -252,7 +252,7 @@ const extractModernHolderName = (text: string, lines: string[], words: any[]): s
 
   // Analyze word positions for name extraction
   const potentialNames = words
-    .filter(word => word.confidence > 70 && /^[A-Z][a-z]+$/.test(word.text))
+    .filter((word: any) => word.confidence > 70 && /^[A-Z][a-z]+$/.test(word.text))
     .slice(0, 10); // Take first 10 high-confidence capitalized words
 
   for (let i = 0; i < potentialNames.length - 1; i++) {
