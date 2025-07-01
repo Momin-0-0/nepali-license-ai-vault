@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { CheckCircle, CreditCard, Chip, Shield, Zap } from "lucide-react";
+import { CheckCircle, CreditCard, Cpu, Shield, Zap } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useOfflineSync } from "@/hooks/useOfflineSync";
 import { useLocalStorage } from "@/hooks/useLocalStorage";
@@ -176,7 +176,7 @@ const Upload = () => {
             <div className="flex items-center justify-center gap-3 mb-4">
               <div className="relative">
                 <CreditCard className="w-12 h-12 text-blue-600" />
-                <Chip className="w-6 h-6 text-orange-500 absolute -top-1 -right-1" />
+                <Cpu className="w-6 h-6 text-orange-500 absolute -top-1 -right-1" />
               </div>
               <Shield className="w-8 h-8 text-green-600" />
               <Zap className="w-8 h-8 text-yellow-500" />
@@ -273,7 +273,7 @@ const Upload = () => {
                   <div className="flex items-center justify-center space-x-4">
                     <div className="relative">
                       <div className="w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
-                      <Chip className="w-4 h-4 text-orange-500 absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2" />
+                      <Cpu className="w-4 h-4 text-orange-500 absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2" />
                     </div>
                     <div className="text-center">
                       <p className="text-lg font-medium text-blue-800">{progressText}</p>
@@ -337,7 +337,7 @@ const Upload = () => {
                         <span><strong>Security:</strong> Enterprise Grade</span>
                       </div>
                       <div className="flex items-center gap-2">
-                        <Chip className="w-4 h-4 text-orange-500" />
+                        <Cpu className="w-4 h-4 text-orange-500" />
                         <span><strong>Format:</strong> Modern Chip Card</span>
                       </div>
                     </div>

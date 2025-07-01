@@ -41,15 +41,17 @@ export const processImageWithOCR = async (
 
       onProgress?.('Extracting text from modern Nepal license format...');
 
-      const { data: { text, words } } = await worker.recognize(enhancedImage);
+      const result = await worker.recognize(enhancedImage);
+      const text = result.data.text;
+      const words = result.data.words || [];
       
       console.log('=== Modern Nepal License OCR Analysis ===');
       console.log('Raw OCR text:', text);
-      console.log('Word-level data:', words?.map(w => ({ text: w.text, confidence: w.confidence, bbox: w.bbox })));
+      console.log('Word-level data:', words.map(w => ({ text: w.text, confidence: w.confidence, bbox: w.bbox })));
       
       onProgress?.('Analyzing extracted data with advanced algorithms...');
 
-      const extractedData = extractModernNepalLicenseData(text, words || []);
+      const extractedData = extractModernNepalLicenseData(text, words);
       
       console.log('Extracted modern Nepal license data:', extractedData);
       
