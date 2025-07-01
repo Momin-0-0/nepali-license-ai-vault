@@ -105,8 +105,57 @@ export const performComprehensiveExtractionForNepal = async (
   
   const extractedData: Partial<LicenseData> = {};
 
-  // Stage 1: Enhanced pattern-based extraction for all fields
+  // Stage 1: Enhanced pattern-based extraction for all fields with focus on missing fields
+  
+  // Special handling for license number from the OCR text
+  const licensePatterns = [
+    /D\.?L\.?\s*No\.?\s*(\d{2}-?\d{2,3}-?\d{6,8})/i,
+    /License.*No\.?\s*(\d{2}-?\d{2,3}-?\d{6,8})/i,
+    /(\d{2}-\d{2,3}-\d{6,8})/,
+    /(\d{11,12})/
+  ];
+  
+  for (const pattern of licensePatterns) {
+    const match = cleanText.match(pattern);
+    if (match) {
+      const licenseNum = match[1] || match[0];
+      if (validateNepalLicenseNumber(licenseNum)) {
+        extractedData.licenseNumber = formatNepalLicenseNumber(licenseNum);
+        console.log('✓ License number found:', extractedData.licenseNumber);
+        break;
+      }
+    }
+  }
+  
+  // Special handling for dates - look for date patterns around D.O.I and D.O.E
+  const datePatterns = [
+    /D\.?O\.?I\.?[:\s]*(\d{1,2}[-\/]\d{1,2}[-\/]\d{4})/i, // Issue date
+    /D\.?O\.?E\.?[:\s]*(\d{1,2}[-\/]\d{1,2}[-\/]\d{4})/i, // Expiry date
+    /Issue.*Date[:\s]*(\d{1,2}[-\/]\d{1,2}[-\/]\d{4})/i,
+    /Expiry.*Date[:\s]*(\d{1,2}[-\/]\d{1,2}[-\/]\d{4})/i,
+    /Valid.*Till[:\s]*(\d{1,2}[-\/]\d{1,2}[-\/]\d{4})/i
+  ];
+  
+  for (const pattern of datePatterns) {
+    const match = cleanText.match(pattern);
+    if (match) {
+      const dateStr = match[1];
+      const isoDate = convertNepalDateToISO(dateStr);
+      
+      if (pattern.source.includes('D.O.I') || pattern.source.includes('Issue')) {
+        extractedData.issueDate = isoDate;
+        console.log('✓ Issue date found:', extractedData.issueDate);
+      } else if (pattern.source.includes('D.O.E') || pattern.source.includes('Expiry') || pattern.source.includes('Valid')) {
+        extractedData.expiryDate = isoDate;
+        console.log('✓ Expiry date found:', extractedData.expiryDate);
+      }
+    }
+  }
+
+  // Continue with existing pattern-based extraction for other fields
   for (const [field, patterns] of Object.entries(NEPAL_LICENSE_PATTERNS)) {
+    if (extractedData[field as keyof LicenseData]) continue; // Skip if already found
+    
     for (const pattern of patterns) {
       const matches = cleanText.match(pattern);
       if (matches) {
@@ -116,11 +165,6 @@ export const performComprehensiveExtractionForNepal = async (
             const value = groups[groups.length - 1].trim();
             if (value && value.length > 0) {
               switch (field) {
-                case 'licenseNumber':
-                  if (validateNepalLicenseNumber(value)) {
-                    extractedData.licenseNumber = formatNepalLicenseNumber(value);
-                  }
-                  break;
                 case 'holderName':
                   if (value.length >= 3 && /^[A-Za-z\s.]+$/.test(value)) {
                     extractedData.holderName = value.replace(/\s+/g, ' ').trim();
@@ -158,12 +202,6 @@ export const performComprehensiveExtractionForNepal = async (
                   if (['A+', 'A-', 'B+', 'B-', 'O+', 'O-', 'AB+', 'AB-'].includes(value)) {
                     extractedData.bloodGroup = value as any;
                   }
-                  break;
-                case 'dateOfIssue':
-                  extractedData.issueDate = convertNepalDateToISO(value);
-                  break;
-                case 'dateOfExpiry':
-                  extractedData.expiryDate = convertNepalDateToISO(value);
                   break;
                 case 'category':
                   if (/^[A-Z]+$/.test(value)) {

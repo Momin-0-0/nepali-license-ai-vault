@@ -1,19 +1,68 @@
+
 import { LicenseData } from '@/types/license';
 import { NEPAL_LICENSE_PATTERNS } from './patterns';
 import { WordData, LineData } from './types';
 
 export const extractFromNepalLicenseLines = (lines: string[]): Partial<LicenseData> => {
   const data: Partial<LicenseData> = {};
+  const fullText = lines.join(' ');
   
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i];
     const nextLine = lines[i + 1] || '';
     
-    // License number detection - enhanced format: 03-066-123456
-    if (/D\.?L\.?\s*No/i.test(line)) {
-      const numberMatch = line.match(/(\d{2}-\d{3}-\d{6})/);
-      if (numberMatch) {
-        data.licenseNumber = numberMatch[1];
+    // Enhanced license number detection - multiple formats
+    if (/D\.?L\.?\s*No/i.test(line) || /License.*No/i.test(line)) {
+      // Try different license number patterns
+      const patterns = [
+        /(\d{2}-\d{2,3}-\d{6,8})/,  // 03-06-01416052 or 03-066-123456
+        /(\d{11,12})/,              // Without dashes
+        /D\.?L\.?\s*No\.?\s*(\d{2}-?\d{2,3}-?\d{6,8})/i
+      ];
+      
+      for (const pattern of patterns) {
+        const numberMatch = line.match(pattern) || fullText.match(pattern);
+        if (numberMatch) {
+          data.licenseNumber = formatNepalLicenseNumber(numberMatch[1]);
+          console.log('✓ License number extracted:', data.licenseNumber);
+          break;
+        }
+      }
+    }
+    
+    // Enhanced date extraction - look for D.O.I and D.O.E patterns
+    if (/D\.?O\.?I\.?[:\s]/.test(line) || /Issue.*Date/i.test(line)) {
+      const datePatterns = [
+        /(\d{2}-\d{2}-\d{4})/,  // DD-MM-YYYY
+        /(\d{4}-\d{2}-\d{2})/,  // YYYY-MM-DD
+        /(\d{1,2}\/\d{1,2}\/\d{4})/  // D/M/YYYY or DD/MM/YYYY
+      ];
+      
+      for (const pattern of datePatterns) {
+        const dateMatch = line.match(pattern);
+        if (dateMatch) {
+          data.issueDate = convertNepalDateToISO(dateMatch[1]);
+          console.log('✓ Issue date extracted:', data.issueDate);
+          break;
+        }
+      }
+    }
+    
+    // Enhanced expiry date extraction
+    if (/D\.?O\.?E\.?[:\s]/.test(line) || /Expiry.*Date/i.test(line) || /Valid.*Till/i.test(line)) {
+      const datePatterns = [
+        /(\d{2}-\d{2}-\d{4})/,  // DD-MM-YYYY
+        /(\d{4}-\d{2}-\d{2})/,  // YYYY-MM-DD
+        /(\d{1,2}\/\d{1,2}\/\d{4})/  // D/M/YYYY or DD/MM/YYYY
+      ];
+      
+      for (const pattern of datePatterns) {
+        const dateMatch = line.match(pattern);
+        if (dateMatch) {
+          data.expiryDate = convertNepalDateToISO(dateMatch[1]);
+          console.log('✓ Expiry date extracted:', data.expiryDate);
+          break;
+        }
       }
     }
     
@@ -38,9 +87,18 @@ export const extractFromNepalLicenseLines = (lines: string[]): Partial<LicenseDa
     
     // Date of birth
     if (/D\.?O\.?B\.?[:\s]/.test(line)) {
-      const dobMatch = line.match(/(\d{4}-\d{2}-\d{2})/);
-      if (dobMatch) {
-        data.dateOfBirth = dobMatch[1];
+      const datePatterns = [
+        /(\d{2}-\d{2}-\d{4})/,  // DD-MM-YYYY
+        /(\d{4}-\d{2}-\d{2})/,  // YYYY-MM-DD
+        /(\d{1,2}\/\d{1,2}\/\d{4})/  // D/M/YYYY or DD/MM/YYYY
+      ];
+      
+      for (const pattern of datePatterns) {
+        const dobMatch = line.match(pattern);
+        if (dobMatch) {
+          data.dateOfBirth = convertNepalDateToISO(dobMatch[1]);
+          break;
+        }
       }
     }
     
@@ -81,22 +139,6 @@ export const extractFromNepalLicenseLines = (lines: string[]): Partial<LicenseDa
       const bloodMatch = line.match(/([ABO]{1,2}[+-])/);
       if (bloodMatch && ['A+', 'A-', 'B+', 'B-', 'O+', 'O-', 'AB+', 'AB-'].includes(bloodMatch[1])) {
         data.bloodGroup = bloodMatch[1] as any;
-      }
-    }
-    
-    // Date of issue
-    if (/D\.?O\.?I\.?[:\s]/.test(line) || /Issue.*Date/i.test(line)) {
-      const doiMatch = line.match(/(\d{4}-\d{2}-\d{2})/);
-      if (doiMatch) {
-        data.issueDate = doiMatch[1];
-      }
-    }
-    
-    // Date of expiry
-    if (/D\.?O\.?E\.?[:\s]/.test(line) || /Expiry.*Date/i.test(line) || /Valid.*Till/i.test(line)) {
-      const doeMatch = line.match(/(\d{4}-\d{2}-\d{2})/);
-      if (doeMatch) {
-        data.expiryDate = doeMatch[1];
       }
     }
     
@@ -176,8 +218,8 @@ export const extractFromWordPositions = (words: WordData[]): Partial<LicenseData
 export const validateNepalLicenseNumber = (licenseNumber: string): boolean => {
   const patterns = [
     /^\d{2}-\d{3}-\d{6}$/,  // New enhanced format: 03-066-123456
+    /^\d{2}-\d{2}-\d{8}$/,  // Format like: 03-06-01416052
     /^\d{2}-\d{3}-\d{7}$/,  // Alternative format: 03-066-1234567
-    /^\d{2}-\d{2}-\d{8}$/,  // Old format: 03-02-12345678
     /^\d{11,12}$/           // Without dashes
   ];
   
@@ -187,15 +229,12 @@ export const validateNepalLicenseNumber = (licenseNumber: string): boolean => {
 export const formatNepalLicenseNumber = (licenseNumber: string): string => {
   const cleaned = licenseNumber.replace(/[-\s]/g, '');
   
-  if (cleaned.length === 11) {
+  if (cleaned.length === 12) {
+    // Format like 030601416052 -> 03-06-01416052
+    return `${cleaned.substring(0, 2)}-${cleaned.substring(2, 4)}-${cleaned.substring(4)}`;
+  } else if (cleaned.length === 11) {
     // New format: XX-XXX-XXXXXX
     return `${cleaned.substring(0, 2)}-${cleaned.substring(2, 5)}-${cleaned.substring(5)}`;
-  } else if (cleaned.length === 12) {
-    // Alternative format: XX-XXX-XXXXXXX
-    return `${cleaned.substring(0, 2)}-${cleaned.substring(2, 5)}-${cleaned.substring(5)}`;
-  } else if (cleaned.length === 12) {
-    // Old format: XX-XX-XXXXXXXX
-    return `${cleaned.substring(0, 2)}-${cleaned.substring(2, 4)}-${cleaned.substring(4)}`;
   }
   
   return licenseNumber;
@@ -208,10 +247,18 @@ export const convertNepalDateToISO = (dateString: string): string => {
     return dateString; // Already in ISO format
   }
   
-  const ddmmMatch = dateString.match(/(\d{2})-(\d{2})-(\d{4})/);
+  // Handle DD-MM-YYYY format (common in Nepal licenses)
+  const ddmmMatch = dateString.match(/(\d{1,2})-(\d{1,2})-(\d{4})/);
   if (ddmmMatch) {
     const [, day, month, year] = ddmmMatch;
-    return `${year}-${month}-${day}`;
+    return `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+  }
+  
+  // Handle DD/MM/YYYY format
+  const slashMatch = dateString.match(/(\d{1,2})\/(\d{1,2})\/(\d{4})/);
+  if (slashMatch) {
+    const [, day, month, year] = slashMatch;
+    return `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
   }
   
   return dateString;
