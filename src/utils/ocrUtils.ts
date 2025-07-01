@@ -42,7 +42,12 @@ export const processImageWithOCR = async (
 
       const result = await worker.recognize(enhancedImage);
       const text = result.data.text;
-      const words = result.data.words || [];
+      // Fix: Access words through symbols or handle undefined case
+      const words = result.data.symbols?.map(symbol => ({
+        text: symbol.text,
+        confidence: symbol.confidence,
+        bbox: symbol.bbox
+      })) || [];
       
       console.log('=== Modern Nepal License OCR Analysis ===');
       console.log('Raw OCR text:', text);
