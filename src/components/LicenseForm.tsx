@@ -2,13 +2,12 @@
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { FileText, AlertCircle, Loader2, CheckCircle, XCircle, Info, RefreshCw, Eye } from "lucide-react";
+import { FileText, AlertCircle, Loader2 } from "lucide-react";
 import { LicenseData } from '@/types/license';
 import { validateNepalLicenseNumber, validateDate, validateExpiryDate, sanitizeInput } from '@/utils/validation';
+import LicenseFormField from './forms/LicenseFormField';
+import AutoFillStatus from './forms/AutoFillStatus';
+import VerificationHelper from './forms/VerificationHelper';
 
 interface LicenseFormProps {
   licenseData: LicenseData;
@@ -180,135 +179,6 @@ const LicenseForm = ({
     onSubmit(e);
   };
 
-  const getFieldStatus = (field: keyof LicenseData) => {
-    if (!touched[field]) return null;
-    return errors[field]?.length > 0 ? 'error' : 'success';
-  };
-
-  const renderFieldIcon = (field: keyof LicenseData) => {
-    const status = getFieldStatus(field);
-    if (status === 'error') {
-      return <XCircle className="w-4 h-4 text-red-500" />;
-    }
-    if (status === 'success' && licenseData[field]) {
-      return <CheckCircle className="w-4 h-4 text-green-500" />;
-    }
-    return null;
-  };
-
-  const renderFieldWithVerification = (
-    field: keyof LicenseData,
-    label: string,
-    placeholder: string,
-    required: boolean = false,
-    type: string = "text",
-    isTextarea: boolean = false,
-    isSelect: boolean = false,
-    selectOptions?: string[]
-  ) => {
-    const isAutoFilled = autoFilledFields[field];
-    const status = verificationStatus[field];
-    const fieldError = errors[field];
-    const fieldValue = getFieldValue(field);
-    
-    return (
-      <div className="space-y-2">
-        <Label htmlFor={field} className="flex items-center gap-2">
-          {label} {required && <span className="text-red-500">*</span>}
-          {renderFieldIcon(field)}
-          {isAutoFilled && (
-            <div className="flex items-center gap-1">
-              {status === 'pending' && (
-                <div className="bg-yellow-100 text-yellow-800 px-2 py-1 rounded-full text-xs font-medium flex items-center gap-1">
-                  <Eye className="w-3 h-3" />
-                  Auto-filled - Please verify
-                </div>
-              )}
-              {status === 'verified' && (
-                <div className="bg-green-100 text-green-800 px-2 py-1 rounded-full text-xs font-medium flex items-center gap-1">
-                  <CheckCircle className="w-3 h-3" />
-                  Verified
-                </div>
-              )}
-              {status === 'corrected' && (
-                <div className="bg-blue-100 text-blue-800 px-2 py-1 rounded-full text-xs font-medium flex items-center gap-1">
-                  <RefreshCw className="w-3 h-3" />
-                  Corrected
-                </div>
-              )}
-            </div>
-          )}
-        </Label>
-        
-        <div className="relative">
-          {isSelect ? (
-            <Select 
-              value={fieldValue} 
-              onValueChange={(value) => updateField(field, value)}
-              disabled={disabled}
-            >
-              <SelectTrigger className={`${fieldError?.length > 0 ? 'border-red-500' : ''} ${
-                isAutoFilled && status === 'pending' ? 'border-yellow-400 bg-yellow-50' : ''
-              }`}>
-                <SelectValue placeholder={placeholder} />
-              </SelectTrigger>
-              <SelectContent>
-                {selectOptions?.map((option) => (
-                  <SelectItem key={option} value={option}>
-                    {option}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          ) : isTextarea ? (
-            <Textarea
-              id={field}
-              value={fieldValue}
-              onChange={(e) => updateField(field, e.target.value)}
-              onBlur={() => handleBlur(field)}
-              placeholder={placeholder}
-              rows={3}
-              disabled={disabled}
-              className={`${fieldError?.length > 0 ? 'border-red-500' : ''} ${
-                isAutoFilled && status === 'pending' ? 'border-yellow-400 bg-yellow-50' : ''
-              }`}
-            />
-          ) : (
-            <Input
-              id={field}
-              type={type}
-              value={fieldValue}
-              onChange={(e) => updateField(field, field === 'licenseNumber' ? e.target.value.toUpperCase() : e.target.value)}
-              onBlur={() => handleBlur(field)}
-              placeholder={placeholder}
-              required={required}
-              disabled={disabled}
-              className={`${fieldError?.length > 0 ? 'border-red-500' : ''} ${
-                isAutoFilled && status === 'pending' ? 'border-yellow-400 bg-yellow-50' : ''
-              }`}
-            />
-          )}
-          
-          {isAutoFilled && status === 'pending' && (
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={() => verifyField(field)}
-              className="absolute right-2 top-2 h-6 px-2 text-xs bg-green-50 hover:bg-green-100 text-green-700 border-green-200"
-            >
-              ✓ Correct
-            </Button>
-          )}
-        </div>
-        
-        {touched[field] && fieldError?.map((error, index) => (
-          <p key={index} className="text-sm text-red-500">{error}</p>
-        ))}
-      </div>
-    );
-  };
-
   const autoFilledCount = Object.keys(autoFilledFields).length;
 
   return (
@@ -326,166 +196,226 @@ const LicenseForm = ({
         </CardDescription>
       </CardHeader>
       <CardContent>
-        {/* Auto-fill Status */}
-        {autoFilledCount > 0 && (
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
-            <div className="flex items-start gap-3">
-              <Info className="w-5 h-5 text-blue-600 mt-0.5" />
-              <div className="text-sm text-blue-700">
-                <p className="font-medium mb-2">Auto-Fill Status ({autoFilledCount} fields found):</p>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-xs">
-                  {Object.entries(autoFilledFields).map(([field, isAutoFilled]) => (
-                    <div key={field} className="flex items-center gap-2">
-                      <span className="capitalize">{field.replace(/([A-Z])/g, ' $1').trim()}:</span>
-                      {verificationStatus[field] === 'verified' && (
-                        <span className="text-green-600 font-medium">✓ Verified</span>
-                      )}
-                      {verificationStatus[field] === 'corrected' && (
-                        <span className="text-blue-600 font-medium">✓ Corrected</span>
-                      )}
-                      {verificationStatus[field] === 'pending' && (
-                        <span className="text-yellow-600 font-medium">⏳ Needs verification</span>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
+        <AutoFillStatus 
+          autoFilledCount={autoFilledCount} 
+          verificationStatus={verificationStatus} 
+        />
 
-        {/* Verification Helper */}
-        {showVerificationHelper && autoFilledCount > 0 && (
-          <div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-6">
-            <div className="flex items-start justify-between gap-3">
-              <div className="flex items-start gap-3">
-                <CheckCircle className="w-5 h-5 text-green-600 mt-0.5" />
-                <div className="text-sm text-green-700">
-                  <p className="font-medium mb-1">Verification Guide:</p>
-                  <ul className="list-disc list-inside space-y-1 text-xs">
-                    <li>Yellow highlighted fields were auto-filled by OCR</li>
-                    <li>Click "✓ Correct" if the information is accurate</li>
-                    <li>Edit the field directly if corrections are needed</li>
-                    <li>All fields must be verified before saving</li>
-                  </ul>
-                </div>
-              </div>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setShowVerificationHelper(false)}
-                className="h-6 w-6 p-0"
-              >
-                <XCircle className="w-4 h-4" />
-              </Button>
-            </div>
-          </div>
-        )}
+        <VerificationHelper 
+          show={showVerificationHelper && autoFilledCount > 0}
+          onClose={() => setShowVerificationHelper(false)}
+        />
 
         <form onSubmit={handleSubmit} className="space-y-4">
-          {renderFieldWithVerification(
-            'licenseNumber',
-            'License Number (Nepal Format: XX-XXX-XXXXXX)',
-            'e.g., 03-066-041605',
-            true
-          )}
+          <LicenseFormField
+            field="licenseNumber"
+            label="License Number (Nepal Format: XX-XXX-XXXXXX)"
+            placeholder="e.g., 03-066-041605"
+            required
+            value={getFieldValue('licenseNumber')}
+            onChange={(value) => updateField('licenseNumber', value)}
+            onBlur={() => handleBlur('licenseNumber')}
+            onVerify={() => verifyField('licenseNumber')}
+            disabled={disabled}
+            isAutoFilled={autoFilledFields['licenseNumber']}
+            verificationStatus={verificationStatus['licenseNumber']}
+            errors={errors['licenseNumber']}
+            touched={touched['licenseNumber']}
+          />
 
-          {renderFieldWithVerification(
-            'holderName',
-            'Name (As on License)',
-            'Full name as printed on Nepal license',
-            true
-          )}
+          <LicenseFormField
+            field="holderName"
+            label="Name (As on License)"
+            placeholder="Full name as printed on Nepal license"
+            required
+            value={getFieldValue('holderName')}
+            onChange={(value) => updateField('holderName', value)}
+            onBlur={() => handleBlur('holderName')}
+            onVerify={() => verifyField('holderName')}
+            disabled={disabled}
+            isAutoFilled={autoFilledFields['holderName']}
+            verificationStatus={verificationStatus['holderName']}
+            errors={errors['holderName']}
+            touched={touched['holderName']}
+          />
 
           <div className="grid grid-cols-2 gap-4">
-            {renderFieldWithVerification(
-              'dateOfBirth',
-              'Date of Birth',
-              'YYYY-MM-DD',
-              false,
-              'date'
-            )}
-            {renderFieldWithVerification(
-              'fatherOrHusbandName',
-              'Father/Husband Name',
-              'As printed on license',
-              false
-            )}
+            <LicenseFormField
+              field="dateOfBirth"
+              label="Date of Birth"
+              placeholder="YYYY-MM-DD"
+              type="date"
+              value={getFieldValue('dateOfBirth')}
+              onChange={(value) => updateField('dateOfBirth', value)}
+              onBlur={() => handleBlur('dateOfBirth')}
+              onVerify={() => verifyField('dateOfBirth')}
+              disabled={disabled}
+              isAutoFilled={autoFilledFields['dateOfBirth']}
+              verificationStatus={verificationStatus['dateOfBirth']}
+              errors={errors['dateOfBirth']}
+              touched={touched['dateOfBirth']}
+            />
+            <LicenseFormField
+              field="fatherOrHusbandName"
+              label="Father/Husband Name"
+              placeholder="As printed on license"
+              value={getFieldValue('fatherOrHusbandName')}
+              onChange={(value) => updateField('fatherOrHusbandName', value)}
+              onBlur={() => handleBlur('fatherOrHusbandName')}
+              onVerify={() => verifyField('fatherOrHusbandName')}
+              disabled={disabled}
+              isAutoFilled={autoFilledFields['fatherOrHusbandName']}
+              verificationStatus={verificationStatus['fatherOrHusbandName']}
+              errors={errors['fatherOrHusbandName']}
+              touched={touched['fatherOrHusbandName']}
+            />
           </div>
 
-          {renderFieldWithVerification(
-            'address',
-            'Address (As on License)',
-            'Address as printed on Nepal license',
-            true,
-            'text',
-            true
-          )}
+          <LicenseFormField
+            field="address"
+            label="Address (As on License)"
+            placeholder="Address as printed on Nepal license"
+            required
+            isTextarea
+            value={getFieldValue('address')}
+            onChange={(value) => updateField('address', value)}
+            onBlur={() => handleBlur('address')}
+            onVerify={() => verifyField('address')}
+            disabled={disabled}
+            isAutoFilled={autoFilledFields['address']}
+            verificationStatus={verificationStatus['address']}
+            errors={errors['address']}
+            touched={touched['address']}
+          />
 
           <div className="grid grid-cols-2 gap-4">
-            {renderFieldWithVerification(
-              'citizenshipNo',
-              'Citizenship Number',
-              'Nepal citizenship number',
-              false
-            )}
-            {renderFieldWithVerification(
-              'passportNo',
-              'Passport Number',
-              'Passport number (if any)',
-              false
-            )}
+            <LicenseFormField
+              field="citizenshipNo"
+              label="Citizenship Number"
+              placeholder="Nepal citizenship number"
+              value={getFieldValue('citizenshipNo')}
+              onChange={(value) => updateField('citizenshipNo', value)}
+              onBlur={() => handleBlur('citizenshipNo')}
+              onVerify={() => verifyField('citizenshipNo')}
+              disabled={disabled}
+              isAutoFilled={autoFilledFields['citizenshipNo']}
+              verificationStatus={verificationStatus['citizenshipNo']}
+              errors={errors['citizenshipNo']}
+              touched={touched['citizenshipNo']}
+            />
+            <LicenseFormField
+              field="passportNo"
+              label="Passport Number"
+              placeholder="Passport number (if any)"
+              value={getFieldValue('passportNo')}
+              onChange={(value) => updateField('passportNo', value)}
+              onBlur={() => handleBlur('passportNo')}
+              onVerify={() => verifyField('passportNo')}
+              disabled={disabled}
+              isAutoFilled={autoFilledFields['passportNo']}
+              verificationStatus={verificationStatus['passportNo']}
+              errors={errors['passportNo']}
+              touched={touched['passportNo']}
+            />
           </div>
 
           <div className="grid grid-cols-2 gap-4">
-            {renderFieldWithVerification(
-              'phoneNo',
-              'Phone Number',
-              '10-digit phone number',
-              false
-            )}
-            {renderFieldWithVerification(
-              'bloodGroup',
-              'Blood Group',
-              'Select blood group',
-              false,
-              'text',
-              false,
-              true,
-              ['A+', 'A-', 'B+', 'B-', 'O+', 'O-', 'AB+', 'AB-']
-            )}
+            <LicenseFormField
+              field="phoneNo"
+              label="Phone Number"
+              placeholder="10-digit phone number"
+              value={getFieldValue('phoneNo')}
+              onChange={(value) => updateField('phoneNo', value)}
+              onBlur={() => handleBlur('phoneNo')}
+              onVerify={() => verifyField('phoneNo')}
+              disabled={disabled}
+              isAutoFilled={autoFilledFields['phoneNo']}
+              verificationStatus={verificationStatus['phoneNo']}
+              errors={errors['phoneNo']}
+              touched={touched['phoneNo']}
+            />
+            <LicenseFormField
+              field="bloodGroup"
+              label="Blood Group"
+              placeholder="Select blood group"
+              isSelect
+              selectOptions={['A+', 'A-', 'B+', 'B-', 'O+', 'O-', 'AB+', 'AB-']}
+              value={getFieldValue('bloodGroup')}
+              onChange={(value) => updateField('bloodGroup', value)}
+              onBlur={() => handleBlur('bloodGroup')}
+              onVerify={() => verifyField('bloodGroup')}
+              disabled={disabled}
+              isAutoFilled={autoFilledFields['bloodGroup']}
+              verificationStatus={verificationStatus['bloodGroup']}
+              errors={errors['bloodGroup']}
+              touched={touched['bloodGroup']}
+            />
           </div>
 
           <div className="grid grid-cols-2 gap-4">
-            {renderFieldWithVerification(
-              'issueDate',
-              'Date of Issue',
-              'YYYY-MM-DD',
-              true,
-              'date'
-            )}
-            {renderFieldWithVerification(
-              'expiryDate',
-              'Date of Expiry',
-              'YYYY-MM-DD',
-              true,
-              'date'
-            )}
+            <LicenseFormField
+              field="issueDate"
+              label="Date of Issue"
+              placeholder="YYYY-MM-DD"
+              required
+              type="date"
+              value={getFieldValue('issueDate')}
+              onChange={(value) => updateField('issueDate', value)}
+              onBlur={() => handleBlur('issueDate')}
+              onVerify={() => verifyField('issueDate')}
+              disabled={disabled}
+              isAutoFilled={autoFilledFields['issueDate']}
+              verificationStatus={verificationStatus['issueDate']}
+              errors={errors['issueDate']}
+              touched={touched['issueDate']}
+            />
+            <LicenseFormField
+              field="expiryDate"
+              label="Date of Expiry"
+              placeholder="YYYY-MM-DD"
+              required
+              type="date"
+              value={getFieldValue('expiryDate')}
+              onChange={(value) => updateField('expiryDate', value)}
+              onBlur={() => handleBlur('expiryDate')}
+              onVerify={() => verifyField('expiryDate')}
+              disabled={disabled}
+              isAutoFilled={autoFilledFields['expiryDate']}
+              verificationStatus={verificationStatus['expiryDate']}
+              errors={errors['expiryDate']}
+              touched={touched['expiryDate']}
+            />
           </div>
 
           <div className="grid grid-cols-2 gap-4">
-            {renderFieldWithVerification(
-              'category',
-              'License Category',
-              'e.g., A, B, C',
-              false
-            )}
-            {renderFieldWithVerification(
-              'issuingAuthority',
-              'Issued By',
-              'Department of Transport Management, Government of Nepal',
-              false
-            )}
+            <LicenseFormField
+              field="category"
+              label="License Category"
+              placeholder="e.g., A, B, C"
+              value={getFieldValue('category')}
+              onChange={(value) => updateField('category', value)}
+              onBlur={() => handleBlur('category')}
+              onVerify={() => verifyField('category')}
+              disabled={disabled}
+              isAutoFilled={autoFilledFields['category']}
+              verificationStatus={verificationStatus['category']}
+              errors={errors['category']}
+              touched={touched['category']}
+            />
+            <LicenseFormField
+              field="issuingAuthority"
+              label="Issued By"
+              placeholder="Department of Transport Management, Government of Nepal"
+              value={getFieldValue('issuingAuthority')}
+              onChange={(value) => updateField('issuingAuthority', value)}
+              onBlur={() => handleBlur('issuingAuthority')}
+              onVerify={() => verifyField('issuingAuthority')}
+              disabled={disabled}
+              isAutoFilled={autoFilledFields['issuingAuthority']}
+              verificationStatus={verificationStatus['issuingAuthority']}
+              errors={errors['issuingAuthority']}
+              touched={touched['issuingAuthority']}
+            />
           </div>
 
           {autoFilledCount === 0 && (
