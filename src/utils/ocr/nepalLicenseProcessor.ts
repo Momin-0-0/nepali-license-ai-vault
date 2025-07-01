@@ -44,10 +44,14 @@ export const processImageWithOCR = async (
     onProgress?.('Extracting license fields...');
     
     // Extract structured data using advanced algorithms
+    // Access words and lines from the blocks structure
+    const words = data.blocks?.[0]?.paragraphs?.[0]?.words || [];
+    const lines = data.blocks?.[0]?.paragraphs?.[0]?.lines || [];
+    
     const extractedData = await performAdvancedExtractionForNepal(
       data.text || '',
-      data.words || [],
-      data.lines || [],
+      words,
+      lines,
       data.confidence || 0
     );
     
