@@ -1,4 +1,3 @@
-
 import Tesseract from 'tesseract.js';
 import { LicenseData } from '@/types/license';
 
@@ -157,8 +156,8 @@ const extractModernNepalLicenseData = (text: string, words: any[]): Partial<Lice
   // Extract holder name (positioned after photo area)
   extractedData.holderName = extractModernHolderName(cleanText, lines, words);
   
-  // Extract dates from structured format
-  const dates = extractModernDates(cleanText, lines, words);
+  // Extract dates from DOI/DOE format
+  const dates = extractDOIAndDOEDates(cleanText, lines, words);
   extractedData.issueDate = dates.issueDate;
   extractedData.expiryDate = dates.expiryDate;
   
@@ -265,75 +264,163 @@ const extractModernHolderName = (text: string, lines: string[], words: any[]): s
   return '';
 };
 
-const extractModernDates = (text: string, lines: string[], words: any[]): { issueDate?: string; expiryDate?: string } => {
-  console.log('Extracting modern Nepal license dates...');
+const extractDOIAndDOEDates = (text: string, lines: string[], words: any[]): { issueDate?: string; expiryDate?: string } => {
+  console.log('Extracting DOI (Date of Issue) and DOE (Date of Expiry) from Nepal license...');
   
   const dates: { issueDate?: string; expiryDate?: string } = {};
   
-  // Modern Nepal license date patterns
-  const datePatterns = [
-    /(\d{4}[-\/\s]\d{1,2}[-\/\s]\d{1,2})/g,
-    /(\d{1,2}[-\/\s]\d{1,2}[-\/\s]\d{4})/g,
-    /(202[0-9]|203[0-9])/g // Years in modern licenses
+  // Enhanced patterns for DOI and DOE format
+  const doiPatterns = [
+    /DOI[:\s]*(\d{4}[-\/\s]\d{1,2}[-\/\s]\d{1,2})/gi,
+    /DOI[:\s]*(\d{1,2}[-\/\s]\d{1,2}[-\/\s]\d{4})/gi,
+    /Date\s*of\s*Issue[:\s]*(\d{4}[-\/\s]\d{1,2}[-\/\s]\d{1,2})/gi,
+    /Date\s*of\s*Issue[:\s]*(\d{1,2}[-\/\s]\d{1,2}[-\/\s]\d{4})/gi,
+    /Issue[:\s]*(\d{4}[-\/\s]\d{1,2}[-\/\s]\d{1,2})/gi,
+    /Issue[:\s]*(\d{1,2}[-\/\s]\d{1,2}[-\/\s]\d{4})/gi
   ];
 
-  const foundDates: string[] = [];
-  
-  for (const pattern of datePatterns) {
-    const matches = text.match(pattern);
-    if (matches) {
-      foundDates.push(...matches);
+  const doePatterns = [
+    /DOE[:\s]*(\d{4}[-\/\s]\d{1,2}[-\/\s]\d{1,2})/gi,
+    /DOE[:\s]*(\d{1,2}[-\/\s]\d{1,2}[-\/\s]\d{4})/gi,
+    /Date\s*of\s*Expiry[:\s]*(\d{4}[-\/\s]\d{1,2}[-\/\s]\d{1,2})/gi,
+    /Date\s*of\s*Expiry[:\s]*(\d{1,2}[-\/\s]\d{1,2}[-\/\s]\d{4})/gi,
+    /Expiry[:\s]*(\d{4}[-\/\s]\d{1,2}[-\/\s]\d{1,2})/gi,
+    /Expiry[:\s]*(\d{1,2}[-\/\s]\d{1,2}[-\/\s]\d{4})/gi,
+    /Valid\s*Till[:\s]*(\d{4}[-\/\s]\d{1,2}[-\/\s]\d{1,2})/gi,
+    /Valid\s*Till[:\s]*(\d{1,2}[-\/\s]\d{1,2}[-\/\s]\d{4})/gi
+  ];
+
+  // Extract DOI (Date of Issue)
+  for (const pattern of doiPatterns) {
+    const match = text.match(pattern);
+    if (match && match[1]) {
+      const dateStr = match[1];
+      const convertedDate = convertNepalDateToISO(dateStr);
+      if (isValidDate(convertedDate)) {
+        dates.issueDate = convertedDate;
+        console.log('✓ DOI (Issue Date) found:', dateStr, '→', convertedDate);
+        break;
+      }
     }
   }
 
-  // Convert and validate dates
-  const validDates = foundDates
-    .map(dateStr => {
-      const converted = convertModernNepalDateToISO(dateStr);
-      const date = new Date(converted);
-      return !isNaN(date.getTime()) && date.getFullYear() >= 2020 && date.getFullYear() <= 2035
-        ? { original: dateStr, iso: converted, date }
-        : null;
-    })
-    .filter(Boolean)
-    .sort((a, b) => a!.date.getTime() - b!.date.getTime());
+  // Extract DOE (Date of Expiry)
+  for (const pattern of doePatterns) {
+    const match = text.match(pattern);
+    if (match && match[1]) {
+      const dateStr = match[1];
+      const convertedDate = convertNepalDateToISO(dateStr);
+      if (isValidDate(convertedDate)) {
+        dates.expiryDate = convertedDate;
+        console.log('✓ DOE (Expiry Date) found:', dateStr, '→', convertedDate);
+        break;
+      }
+    }
+  }
 
-  if (validDates.length >= 2) {
-    dates.issueDate = validDates[0]!.iso;
-    dates.expiryDate = validDates[validDates.length - 1]!.iso;
-    console.log('✓ Modern Nepal dates - Issue:', dates.issueDate, 'Expiry:', dates.expiryDate);
-  } else if (validDates.length === 1) {
-    // For modern licenses, single date is typically expiry
-    dates.expiryDate = validDates[0]!.iso;
-    console.log('✓ Modern Nepal expiry date:', dates.expiryDate);
+  // Word-level analysis for DOI/DOE when pattern matching fails
+  if (!dates.issueDate || !dates.expiryDate) {
+    console.log('Pattern matching failed, analyzing word positions...');
+    
+    for (let i = 0; i < words.length - 3; i++) {
+      const word1 = words[i]?.text?.toUpperCase() || '';
+      const word2 = words[i + 1]?.text || '';
+      const word3 = words[i + 2]?.text || '';
+      const word4 = words[i + 3]?.text || '';
+      
+      // Look for DOI pattern
+      if (word1 === 'DOI' && !dates.issueDate) {
+        const possibleDate = `${word2} ${word3} ${word4}`.replace(/\s+/g, '-');
+        const convertedDate = convertNepalDateToISO(possibleDate);
+        if (isValidDate(convertedDate)) {
+          dates.issueDate = convertedDate;
+          console.log('✓ DOI from word analysis:', possibleDate, '→', convertedDate);
+        }
+      }
+      
+      // Look for DOE pattern
+      if (word1 === 'DOE' && !dates.expiryDate) {
+        const possibleDate = `${word2} ${word3} ${word4}`.replace(/\s+/g, '-');
+        const convertedDate = convertNepalDateToISO(possibleDate);
+        if (isValidDate(convertedDate)) {
+          dates.expiryDate = convertedDate;
+          console.log('✓ DOE from word analysis:', possibleDate, '→', convertedDate);
+        }
+      }
+    }
+  }
+
+  // Fallback: Look for any dates in format and assign based on chronological order
+  if (!dates.issueDate || !dates.expiryDate) {
+    console.log('Fallback: Looking for any dates in the text...');
+    
+    const allDatePatterns = [
+      /(\d{4}[-\/\s]\d{1,2}[-\/\s]\d{1,2})/g,
+      /(\d{1,2}[-\/\s]\d{1,2}[-\/\s]\d{4})/g
+    ];
+
+    const foundDates: string[] = [];
+    
+    for (const pattern of allDatePatterns) {
+      let match;
+      while ((match = pattern.exec(text)) !== null) {
+        const convertedDate = convertNepalDateToISO(match[1]);
+        if (isValidDate(convertedDate)) {
+          foundDates.push(convertedDate);
+        }
+      }
+    }
+
+    // Sort dates and assign first as issue, last as expiry
+    const sortedDates = [...new Set(foundDates)].sort();
+    if (sortedDates.length >= 2) {
+      if (!dates.issueDate) dates.issueDate = sortedDates[0];
+      if (!dates.expiryDate) dates.expiryDate = sortedDates[sortedDates.length - 1];
+      console.log('✓ Fallback dates assigned - Issue:', dates.issueDate, 'Expiry:', dates.expiryDate);
+    }
   }
 
   return dates;
 };
 
-const convertModernNepalDateToISO = (dateString: string): string => {
+const convertNepalDateToISO = (dateString: string): string => {
   const cleanDate = dateString.replace(/\s+/g, '-').replace(/[\/]/g, '-');
-  const parts = cleanDate.split('-');
+  const parts = cleanDate.split('-').filter(part => part.length > 0);
   
   if (parts.length === 3) {
     let [first, second, third] = parts;
     
-    // Handle different modern date formats
+    // Handle different date formats
     if (third.length === 4) {
-      // DD-MM-YYYY or MM-DD-YYYY
-      return `${third}-${second.padStart(2, '0')}-${first.padStart(2, '0')}`;
+      // DD-MM-YYYY or MM-DD-YYYY format
+      const day = first.padStart(2, '0');
+      const month = second.padStart(2, '0');
+      const year = third;
+      
+      // Try DD-MM-YYYY first (common in Nepal)
+      if (parseInt(day) <= 31 && parseInt(month) <= 12) {
+        return `${year}-${month}-${day}`;
+      }
+      // Try MM-DD-YYYY if first attempt doesn't make sense
+      else if (parseInt(second) <= 31 && parseInt(first) <= 12) {
+        return `${year}-${first.padStart(2, '0')}-${second.padStart(2, '0')}`;
+      }
     } else if (first.length === 4) {
-      // YYYY-MM-DD
+      // YYYY-MM-DD format
       return `${first}-${second.padStart(2, '0')}-${third.padStart(2, '0')}`;
     }
   }
   
-  // If it's just a year, create a reasonable date
-  if (/^20[2-3]\d$/.test(dateString)) {
-    return `${dateString}-01-01`;
-  }
-  
   return dateString;
+};
+
+const isValidDate = (dateString: string): boolean => {
+  const date = new Date(dateString);
+  const currentYear = new Date().getFullYear();
+  
+  return !isNaN(date.getTime()) && 
+         date.getFullYear() >= 1990 && 
+         date.getFullYear() <= currentYear + 20;
 };
 
 const extractModernAddress = (text: string, lines: string[], words: any[]): string => {
