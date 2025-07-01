@@ -1,5 +1,4 @@
 
-
 import { createWorker, PSM } from 'tesseract.js';
 import { LicenseData } from '@/types/license';
 import { NEPAL_LICENSE_PATTERNS } from './patterns';
@@ -45,8 +44,26 @@ export const processImageWithOCR = async (
     
     // Extract structured data using advanced algorithms
     // Access words and lines from the blocks structure
-    const words = data.blocks?.[0]?.paragraphs?.[0]?.words || [];
-    const lines = data.blocks?.[0]?.paragraphs?.[0]?.lines || [];
+    const words: any[] = [];
+    const lines: any[] = [];
+    
+    // Collect all words and lines from all blocks, paragraphs, and lines
+    if (data.blocks) {
+      for (const block of data.blocks) {
+        if (block.paragraphs) {
+          for (const paragraph of block.paragraphs) {
+            if (paragraph.lines) {
+              for (const line of paragraph.lines) {
+                lines.push(line);
+                if (line.words) {
+                  words.push(...line.words);
+                }
+              }
+            }
+          }
+        }
+      }
+    }
     
     const extractedData = await performAdvancedExtractionForNepal(
       data.text || '',
