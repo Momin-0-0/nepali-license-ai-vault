@@ -1,71 +1,72 @@
 
 import { NepalLicenseRegions } from './types';
 
-// Enhanced Nepal License Field Patterns based on actual license format
+// Enhanced Nepal License Field Patterns based on real license format
 export const NEPAL_LICENSE_PATTERNS = {
   licenseNumber: [
-    /D\.L\.No[:\s]*(\d{2}-\d{2}-\d{8})/gi,
-    /D\.L\.No[:\s]*(\d{2}-\d{2}-\d{9})/gi,
-    /(\d{2}-\d{2}-\d{8,9})/gi,
-    /D\.L\.No[:\s]*(\d{11,13})/gi
+    /D\.?L\.?\s*No\.?\s*[:\-]?\s*(\d{2}-\d{3}-\d{7})/gi,
+    /License\s*No\.?\s*[:\-]?\s*(\d{2}-\d{3}-\d{7})/gi,
+    /(\d{2}-\d{3}-\d{7})/gi,
+    /D\.?L\.?\s*No\.?\s*[:\-]?\s*(\d{11})/gi
   ],
   bloodGroup: [
-    /B\.G[:\s]*([ABO]{1,2}[+-]?)/gi,
-    /BG[:\s]*([ABO]{1,2}[+-]?)/gi,
-    /Blood[:\s]*Group[:\s]*([ABO]{1,2}[+-]?)/gi
+    /B\.?G\.?\s*[:\-]?\s*([ABO]{1,2}[+-])/gi,
+    /Blood\s*Group\s*[:\-]?\s*([ABO]{1,2}[+-])/gi,
+    /([ABO]{1,2}[+-])/gi
   ],
   holderName: [
-    /Name[:\s]*([A-Z][a-zA-Z\s]{3,50})/gi,
-    /नाम[:\s]*([A-Z][a-zA-Z\s]{3,50})/gi,
+    /Name\s*[:\-]?\s*([A-Z][a-zA-Z\s]{2,50})/gi,
+    /नाम\s*[:\-]?\s*([A-Z][a-zA-Z\s]{2,50})/gi,
     /([A-Z][a-zA-Z]+\s+[A-Z][a-zA-Z]+(?:\s+[A-Z][a-zA-Z]+)?)/gi
   ],
   address: [
-    /Address[:\s]*([A-Za-z0-9,\s\-]{5,100})/gi,
-    /ठेगाना[:\s]*([A-Za-z0-9,\s\-]{5,100})/gi,
-    /([A-Za-z\-]+,\s*[A-Za-z\-]+,\s*Nepal)/gi
+    /Address\s*[:\-]?\s*([A-Za-z0-9,\s\-]{5,100})/gi,
+    /ठेगाना\s*[:\-]?\s*([A-Za-z0-9,\s\-]{5,100})/gi,
+    /([A-Za-z\-]+\-\d+,\s*[A-Za-z\-]+,\s*[A-Za-z\-]+,\s*Nepal)/gi
   ],
   dateOfBirth: [
-    /D\.O\.B[:\s]*(\d{2}-\d{2}-\d{4})/gi,
-    /DOB[:\s]*(\d{2}-\d{2}-\d{4})/gi,
-    /जन्म[:\s]*मिति[:\s]*(\d{2}-\d{2}-\d{4})/gi,
-    /(\d{2}-\d{2}-\d{4})/gi
+    /D\.?O\.?B\.?\s*[:\-]?\s*(\d{4}-\d{2}-\d{2})/gi,
+    /Date\s*of\s*Birth\s*[:\-]?\s*(\d{4}-\d{2}-\d{2})/gi,
+    /जन्म\s*मिति\s*[:\-]?\s*(\d{4}-\d{2}-\d{2})/gi,
+    /(\d{4}-\d{2}-\d{2})/gi
   ],
   citizenshipNo: [
-    /Citizenship[:\s]*No[:\s]*(\d{10,15})/gi,
-    /नागरिकता[:\s]*नं[:\s]*(\d{10,15})/gi,
+    /Citizenship\s*No\.?\s*[:\-]?\s*(\d{11})/gi,
+    /नागरिकता\s*नं\s*[:\-]?\s*(\d{11})/gi,
     /(\d{11})/gi
   ],
   phoneNo: [
-    /Phone[:\s]*No[:\s]*(\d{10})/gi,
-    /फोन[:\s]*नं[:\s]*(\d{10})/gi,
-    /Mobile[:\s]*(\d{10})/gi,
+    /Phone\s*No\.?\s*[:\-]?\s*(\d{10})/gi,
+    /Mobile\s*[:\-]?\s*(\d{10})/gi,
+    /फोन\s*नं\s*[:\-]?\s*(\d{10})/gi,
     /(98\d{8})/gi
   ],
   issueDate: [
-    /D\.O\.I[:\s]*(\d{2}-\d{2}-\d{4})/gi,
-    /DOI[:\s]*(\d{2}-\d{2}-\d{4})/gi,
-    /Issue[:\s]*Date[:\s]*(\d{2}-\d{2}-\d{4})/gi,
-    /जारी[:\s]*मिति[:\s]*(\d{2}-\d{2}-\d{4})/gi
+    /D\.?O\.?I\.?\s*[:\-]?\s*(\d{4}-\d{2}-\d{2})/gi,
+    /Date\s*of\s*Issue\s*[:\-]?\s*(\d{4}-\d{2}-\d{2})/gi,
+    /Issue\s*Date\s*[:\-]?\s*(\d{4}-\d{2}-\d{2})/gi,
+    /जारी\s*मिति\s*[:\-]?\s*(\d{4}-\d{2}-\d{2})/gi
   ],
   expiryDate: [
-    /D\.O\.E[:\s]*(\d{2}-\d{2}-\d{4})/gi,
-    /DOE[:\s]*(\d{2}-\d{2}-\d{4})/gi,
-    /Expiry[:\s]*Date[:\s]*(\d{2}-\d{2}-\d{4})/gi,
-    /समाप्ति[:\s]*मिति[:\s]*(\d{2}-\d{2}-\d{4})/gi
+    /D\.?O\.?E\.?\s*[:\-]?\s*(\d{4}-\d{2}-\d{2})/gi,
+    /Date\s*of\s*Expiry\s*[:\-]?\s*(\d{4}-\d{2}-\d{2})/gi,
+    /Expiry\s*Date\s*[:\-]?\s*(\d{4}-\d{2}-\d{2})/gi,
+    /समाप्ति\s*मिति\s*[:\-]?\s*(\d{4}-\d{2}-\d{2})/gi
   ],
   category: [
-    /Category[:\s]*([A-Z]+)/gi,
-    /श्रेणी[:\s]*([A-Z]+)/gi,
-    /Class[:\s]*([A-Z]+)/gi
+    /Category\s*[:\-]?\s*([A-Z]+)/gi,
+    /श्रेणी\s*[:\-]?\s*([A-Z]+)/gi,
+    /Class\s*[:\-]?\s*([A-Z]+)/gi,
+    /([A-Z])\s*(?:Category|Class|श्रेणी)/gi
   ],
   fatherName: [
-    /F\/H[:\s]*Name[:\s]*([A-Z][a-zA-Z\s]{3,50})/gi,
-    /Father[:\s]*Name[:\s]*([A-Z][a-zA-Z\s]{3,50})/gi,
-    /बुबाको[:\s]*नाम[:\s]*([A-Z][a-zA-Z\s]{3,50})/gi
+    /F\/H\s*Name\s*[:\-]?\s*([A-Z][a-zA-Z\s]{2,50})/gi,
+    /Father\s*Name\s*[:\-]?\s*([A-Z][a-zA-Z\s]{2,50})/gi,
+    /बुबाको\s*नाम\s*[:\-]?\s*([A-Z][a-zA-Z\s]{2,50})/gi
   ],
   passportNo: [
-    /Passport[:\s]*No[:\s]*([A-Z0-9]{8,15})/gi,
-    /राहदानी[:\s]*नं[:\s]*([A-Z0-9]{8,15})/gi
+    /Passport\s*No\.?\s*[:\-]?\s*([A-Z0-9]{8,15})/gi,
+    /राहदानी\s*नं\s*[:\-]?\s*([A-Z0-9]{8,15})/gi
   ]
 };
 

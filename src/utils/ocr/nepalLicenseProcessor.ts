@@ -1,7 +1,9 @@
 
+import { createWorker } from 'tesseract.js';
 import { LicenseData } from '@/types/license';
 import { NEPAL_LICENSE_PATTERNS } from './patterns';
-import { WordData, LineData } from './types';
+import { WordData, LineData, OCRProgress } from './types';
+import { preprocessNepalLicenseImage } from './imagePreprocessing';
 import { 
   extractFromNepalLicenseLines, 
   extractFromWordPositions, 
@@ -10,6 +12,61 @@ import {
   validateNepalLicenseNumber, 
   formatNepalLicenseNumber 
 } from './dataExtraction';
+
+export const processImageWithOCR = async (
+  imageFile: File,
+  onProgress?: (status: string) => void
+): Promise<Partial<LicenseData>> => {
+  let worker: Tesseract.Worker | null = null;
+  
+  try {
+    onProgress?.('Initializing OCR engine for Nepal license...');
+    
+    // Enhanced preprocessing for Nepal license
+    const preprocessedImage = await preprocessNepalLicenseImage(imageFile);
+    
+    // Initialize Tesseract worker
+    worker = await createWorker('eng');
+    
+    // Configure for Nepal license text recognition
+    await worker.setParameters({
+      tessedit_char_whitelist: 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-+:., /',
+      tessedit_pageseg_mode: '6', // Uniform block of text
+      preserve_interword_spaces: '1'
+    });
+    
+    onProgress?.('Analyzing Nepal license image...');
+    
+    // Perform OCR with detailed output
+    const { data } = await worker.recognize(preprocessedImage);
+    
+    onProgress?.('Extracting license fields...');
+    
+    // Extract structured data using advanced algorithms
+    const extractedData = await performAdvancedExtractionForNepal(
+      data.text || '',
+      data.words || [],
+      data.lines || [],
+      data.confidence || 0
+    );
+    
+    onProgress?.('Validation and cleanup...');
+    
+    return extractedData;
+    
+  } catch (error) {
+    console.error('OCR Processing Error:', error);
+    throw new Error(`OCR failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+  } finally {
+    if (worker) {
+      await worker.terminate();
+    }
+  }
+};
+
+export const preprocessImageForOCR = async (imageFile: File): Promise<File> => {
+  return preprocessNepalLicenseImage(imageFile);
+};
 
 export const performAdvancedExtractionForNepal = async (
   text: string, 

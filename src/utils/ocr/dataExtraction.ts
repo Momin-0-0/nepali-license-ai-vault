@@ -9,26 +9,26 @@ export const extractFromNepalLicenseLines = (lines: string[]): Partial<LicenseDa
     const line = lines[i];
     const nextLine = lines[i + 1] || '';
     
-    // License number detection
-    if (/D\.L\.No/i.test(line)) {
-      const numberMatch = line.match(/(\d{2}-\d{2}-\d{8,9})/);
+    // License number detection - format: 03-066-0146052
+    if (/D\.?L\.?\s*No/i.test(line)) {
+      const numberMatch = line.match(/(\d{2}-\d{3}-\d{7})/);
       if (numberMatch) {
         data.licenseNumber = numberMatch[1];
       }
     }
     
-    // Name detection (usually after "Name:")
+    // Name detection
     if (/^Name[:\s]/i.test(line)) {
-      const nameMatch = line.match(/Name[:\s]*([A-Z][a-zA-Z\s]{3,})/i);
+      const nameMatch = line.match(/Name[:\s]*([A-Z][a-zA-Z\s]{2,})/i);
       if (nameMatch) {
         data.holderName = nameMatch[1].trim();
       }
     }
     
-    // Address detection (usually spans multiple lines)
+    // Address detection - format: Rahadé-1, Gulmi, Lumbini, Nepal
     if (/^Address[:\s]/i.test(line)) {
       let address = line.replace(/^Address[:\s]*/i, '').trim();
-      if (nextLine && !nextLine.match(/^(D\.O\.B|DOB|Phone|Category|F\/H)/i)) {
+      if (nextLine && !nextLine.match(/^(D\.O\.B|DOB|Phone|Category|Citizenship)/i)) {
         address += ', ' + nextLine.trim();
       }
       if (address.length > 5) {
@@ -36,29 +36,31 @@ export const extractFromNepalLicenseLines = (lines: string[]): Partial<LicenseDa
       }
     }
     
-    // Date extractions
-    if (/D\.O\.B[:\s]/.test(line)) {
-      const dobMatch = line.match(/(\d{2}-\d{2}-\d{4})/);
+    // Date of birth - format: 2004-04-25
+    if (/D\.?O\.?B\.?[:\s]/.test(line)) {
+      const dobMatch = line.match(/(\d{4}-\d{2}-\d{2})/);
       if (dobMatch) {
-        data.dateOfBirth = convertNepalDateToISO(dobMatch[1]);
+        data.dateOfBirth = dobMatch[1];
       }
     }
     
-    if (/D\.O\.I[:\s]/.test(line)) {
-      const doiMatch = line.match(/(\d{2}-\d{2}-\d{4})/);
+    // Date of issue - format: 2023-02-22
+    if (/D\.?O\.?I\.?[:\s]/.test(line)) {
+      const doiMatch = line.match(/(\d{4}-\d{2}-\d{2})/);
       if (doiMatch) {
-        data.issueDate = convertNepalDateToISO(doiMatch[1]);
+        data.issueDate = doiMatch[1];
       }
     }
     
-    if (/D\.O\.E[:\s]/.test(line)) {
-      const doeMatch = line.match(/(\d{2}-\d{2}-\d{4})/);
+    // Date of expiry - format: 2028-02-21
+    if (/D\.?O\.?E\.?[:\s]/.test(line)) {
+      const doeMatch = line.match(/(\d{4}-\d{2}-\d{2})/);
       if (doeMatch) {
-        data.expiryDate = convertNepalDateToISO(doeMatch[1]);
+        data.expiryDate = doeMatch[1];
       }
     }
     
-    // Phone number
+    // Phone number - format: 9821097622
     if (/Phone[:\s]*No/i.test(line)) {
       const phoneMatch = line.match(/(\d{10})/);
       if (phoneMatch) {
@@ -66,7 +68,7 @@ export const extractFromNepalLicenseLines = (lines: string[]): Partial<LicenseDa
       }
     }
     
-    // Category
+    // Category - format: K
     if (/Category[:\s]/i.test(line)) {
       const categoryMatch = line.match(/Category[:\s]*([A-Z]+)/i);
       if (categoryMatch) {
@@ -74,11 +76,19 @@ export const extractFromNepalLicenseLines = (lines: string[]): Partial<LicenseDa
       }
     }
     
-    // Citizenship number
+    // Citizenship number - format: 41017901915
     if (/Citizenship[:\s]*No/i.test(line)) {
-      const citizenshipMatch = line.match(/(\d{10,15})/);
+      const citizenshipMatch = line.match(/(\d{11})/);
       if (citizenshipMatch) {
         data.citizenshipNo = citizenshipMatch[1];
+      }
+    }
+    
+    // Blood group - format: O+
+    if (/B\.?G\.?[:\s]/i.test(line) || /Blood\s*Group/i.test(line)) {
+      const bloodMatch = line.match(/([ABO]{1,2}[+-])/);
+      if (bloodMatch) {
+        data.bloodGroup = bloodMatch[1];
       }
     }
   }
@@ -110,7 +120,7 @@ export const extractFromWordPositions = (words: WordData[]): Partial<LicenseData
     }
     
     // Look for license number patterns
-    if (/D\.L\.No/i.test(wordText) && /\d{2}-\d{2}-\d{8,9}/.test(nextWordText)) {
+    if (/D\.?L\.?No/i.test(wordText) && /\d{2}-\d{3}-\d{7}/.test(nextWordText)) {
       data.licenseNumber = nextWordText;
     }
     
@@ -125,9 +135,9 @@ export const extractFromWordPositions = (words: WordData[]): Partial<LicenseData
 
 export const validateNepalLicenseNumber = (licenseNumber: string): boolean => {
   const patterns = [
-    /^\d{2}-\d{2}-\d{8}$/,
-    /^\d{2}-\d{2}-\d{9}$/,
-    /^\d{11,13}$/
+    /^\d{2}-\d{3}-\d{7}$/,  // New format: 03-066-0146052
+    /^\d{2}-\d{2}-\d{8}$/,  // Old format: 03-02-12345678
+    /^\d{11,12}$/           // Without dashes
   ];
   
   return patterns.some(pattern => pattern.test(licenseNumber));
@@ -136,7 +146,11 @@ export const validateNepalLicenseNumber = (licenseNumber: string): boolean => {
 export const formatNepalLicenseNumber = (licenseNumber: string): string => {
   const cleaned = licenseNumber.replace(/[-\s]/g, '');
   
-  if (cleaned.length >= 12) {
+  if (cleaned.length === 12) {
+    // New format: XX-XXX-XXXXXXX
+    return `${cleaned.substring(0, 2)}-${cleaned.substring(2, 5)}-${cleaned.substring(5)}`;
+  } else if (cleaned.length === 11) {
+    // Old format: XX-XX-XXXXXXXX
     return `${cleaned.substring(0, 2)}-${cleaned.substring(2, 4)}-${cleaned.substring(4)}`;
   }
   
@@ -144,10 +158,15 @@ export const formatNepalLicenseNumber = (licenseNumber: string): string => {
 };
 
 export const convertNepalDateToISO = (dateString: string): string => {
-  // Handle Nepal date format DD-MM-YYYY
-  const match = dateString.match(/(\d{2})-(\d{2})-(\d{4})/);
-  if (match) {
-    const [, day, month, year] = match;
+  // Handle various Nepal date formats
+  const isoMatch = dateString.match(/(\d{4})-(\d{2})-(\d{2})/);
+  if (isoMatch) {
+    return dateString; // Already in ISO format
+  }
+  
+  const ddmmMatch = dateString.match(/(\d{2})-(\d{2})-(\d{4})/);
+  if (ddmmMatch) {
+    const [, day, month, year] = ddmmMatch;
     return `${year}-${month}-${day}`;
   }
   
@@ -165,7 +184,7 @@ export const validateAndCleanupNepalData = (data: Partial<LicenseData>): Partial
   // Validate and clean name
   if (data.holderName) {
     const cleanName = data.holderName.replace(/[^\w\s]/g, '').trim();
-    if (cleanName.length >= 3 && /^[A-Za-z\s]+$/.test(cleanName)) {
+    if (cleanName.length >= 2 && /^[A-Za-z\s]+$/.test(cleanName)) {
       cleaned.holderName = cleanName;
     }
   }
@@ -175,7 +194,7 @@ export const validateAndCleanupNepalData = (data: Partial<LicenseData>): Partial
     cleaned.address = data.address.trim();
   }
   
-  // Validate dates
+  // Validate dates (already in ISO format)
   if (data.dateOfBirth && /^\d{4}-\d{2}-\d{2}$/.test(data.dateOfBirth)) {
     cleaned.dateOfBirth = data.dateOfBirth;
   }
@@ -188,8 +207,18 @@ export const validateAndCleanupNepalData = (data: Partial<LicenseData>): Partial
     cleaned.expiryDate = data.expiryDate;
   }
   
+  // Validate citizenship number (11 digits)
+  if (data.citizenshipNo && /^\d{11}$/.test(data.citizenshipNo)) {
+    cleaned.citizenshipNo = data.citizenshipNo;
+  }
+  
+  // Validate phone number (10 digits)
+  if (data.phoneNo && /^\d{10}$/.test(data.phoneNo)) {
+    cleaned.phoneNo = data.phoneNo;
+  }
+  
   // Keep other validated fields
-  ['citizenshipNo', 'phoneNo', 'category', 'bloodGroup', 'issuingAuthority'].forEach(field => {
+  ['category', 'bloodGroup', 'issuingAuthority'].forEach(field => {
     if (data[field as keyof LicenseData]) {
       (cleaned as any)[field] = data[field as keyof LicenseData];
     }
