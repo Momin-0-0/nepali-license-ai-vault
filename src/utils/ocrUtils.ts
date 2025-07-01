@@ -1,14 +1,6 @@
+
 import Tesseract from 'tesseract.js';
 import { LicenseData } from '@/types/license';
-import { 
-  NEPAL_LICENSE_PATTERNS, 
-  NEPAL_DATE_PATTERNS, 
-  validateNepalLicenseNumber, 
-  parseNepalDate,
-  isValidNepalName,
-  extractNepalAddress,
-  ISSUING_AUTHORITIES
-} from './nepalLicensePatterns';
 
 interface OCRProgress {
   status: string;
@@ -23,7 +15,6 @@ export const processImageWithOCR = async (
     try {
       onProgress?.('Initializing OCR engine...');
       
-      // Create worker with Nepal-specific configuration
       const worker = await Tesseract.createWorker('eng', 1, {
         logger: (m: OCRProgress) => {
           if (m.status === 'recognizing text') {
@@ -35,27 +26,31 @@ export const processImageWithOCR = async (
         }
       });
 
-      // Configure for better license recognition
       await worker.setParameters({
-        tessedit_char_whitelist: '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz -.,/',
+        tessedit_char_whitelist: '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz -.,/:()',
         tessedit_pageseg_mode: Tesseract.PSM.AUTO,
         preserve_interword_spaces: '1'
       });
 
       onProgress?.('Analyzing license image...');
 
-      // Process the image
       const { data: { text } } = await worker.recognize(imageFile);
+      
+      console.log('Raw OCR text:', text);
       
       onProgress?.('Extracting license information...');
 
-      // Extract license data using Nepal-specific patterns
-      const extractedData = extractLicenseData(text);
+      const extractedData = extractLicenseDataEnhanced(text);
+      
+      console.log('Enhanced OCR processing started...');
+      console.log('Preprocessed text:', text.replace(/\s+/g, ' ').trim());
       
       onProgress?.('Validating extracted data...');
 
-      // Validate and clean the extracted data
       const validatedData = validateAndCleanData(extractedData);
+      
+      console.log('Enhanced extraction completed:', validatedData);
+      console.log(`✓ Extraction complete: ${Object.keys(validatedData).length} fields automatically filled`);
 
       await worker.terminate();
       
@@ -70,73 +65,69 @@ export const processImageWithOCR = async (
   });
 };
 
-const extractLicenseData = (text: string): Partial<LicenseData> => {
+const extractLicenseDataEnhanced = (text: string): Partial<LicenseData> => {
   const lines = text.split('\n').map(line => line.trim()).filter(line => line.length > 0);
-  const fullText = text.replace(/\n/g, ' ');
+  const cleanText = text.replace(/\s+/g, ' ').trim();
   
-  console.log('OCR Text:', text);
-  console.log('Lines:', lines);
-
   const extractedData: Partial<LicenseData> = {};
 
-  // Extract license number using Nepal patterns
-  extractedData.licenseNumber = extractLicenseNumber(fullText, lines);
+  // Extract license number with improved patterns
+  extractedData.licenseNumber = extractLicenseNumberEnhanced(cleanText, lines);
   
-  // Extract holder name
-  extractedData.holderName = extractHolderName(fullText, lines);
+  // Extract holder name with better logic
+  extractedData.holderName = extractHolderNameEnhanced(cleanText, lines);
   
-  // Extract dates
-  const dates = extractDates(fullText, lines);
+  // Extract dates with enhanced pattern matching
+  const dates = extractDatesEnhanced(cleanText, lines);
   extractedData.issueDate = dates.issueDate;
   extractedData.expiryDate = dates.expiryDate;
   
   // Extract issuing authority
-  extractedData.issuingAuthority = extractIssuingAuthority(fullText, lines);
+  extractedData.issuingAuthority = extractIssuingAuthorityEnhanced(cleanText, lines);
   
   // Extract address
-  extractedData.address = extractAddress(fullText, lines);
+  extractedData.address = extractAddressEnhanced(cleanText, lines);
 
   return extractedData;
 };
 
-const extractLicenseNumber = (fullText: string, lines: string[]): string => {
-  // Try different patterns for Nepal license numbers
+const extractLicenseNumberEnhanced = (text: string, lines: string[]): string => {
+  // Enhanced patterns for Nepal license numbers
   const patterns = [
-    /(\d{2}[-\s]?\d{2}[-\s]?\d{9})/g,
-    /(\d{2}[-\s]?\d{2}[-\s]?\d{8})/g,
-    /(\d{2}[-\s]?\d{2}[-\s]?\d{7})/g,
-    /(\d{11,13})/g
+    /(\d{2}[\s\-]?\d{2}[\s\-]?\d{9})/g,
+    /(\d{2}[\s\-]?\d{2}[\s\-]?\d{8})/g,
+    /(\d{11,13})/g,
+    /([0-9]{2}[^0-9]*[0-9]{2}[^0-9]*[0-9]{7,9})/g
   ];
 
   for (const pattern of patterns) {
-    const matches = fullText.match(pattern);
+    const matches = text.match(pattern);
     if (matches) {
       for (const match of matches) {
-        const cleaned = match.replace(/[-\s]/g, '');
-        if (cleaned.length >= 9 && cleaned.length <= 13) {
-          // Format as Nepal standard
-          if (cleaned.length >= 11) {
-            return `${cleaned.substring(0, 2)}-${cleaned.substring(2, 4)}-${cleaned.substring(4)}`;
+        const numbers = match.replace(/[^\d]/g, '');
+        if (numbers.length >= 9 && numbers.length <= 13) {
+          // Format as standard Nepal license
+          if (numbers.length >= 11) {
+            const formatted = `${numbers.substring(0, 2)}-${numbers.substring(2, 4)}-${numbers.substring(4)}`;
+            console.log('✓ License number extracted:', formatted);
+            return formatted;
           }
-          return match;
+          console.log('✓ License number extracted:', numbers);
+          return numbers;
         }
       }
     }
   }
 
-  // Look for license number near keywords
-  const keywords = ['License', 'Licence', 'No', 'Number', 'DL'];
-  for (const line of lines) {
-    for (const keyword of keywords) {
-      if (line.toLowerCase().includes(keyword.toLowerCase())) {
-        const numbers = line.match(/\d{9,}/);
-        if (numbers) {
-          const num = numbers[0];
-          if (num.length >= 11) {
-            return `${num.substring(0, 2)}-${num.substring(2, 4)}-${num.substring(4)}`;
-          }
-          return num;
-        }
+  // Look for sequences of numbers that might be license numbers
+  const allNumbers = text.match(/\d+/g);
+  if (allNumbers) {
+    for (const num of allNumbers) {
+      if (num.length >= 9 && num.length <= 13) {
+        const formatted = num.length >= 11 ? 
+          `${num.substring(0, 2)}-${num.substring(2, 4)}-${num.substring(4)}` : num;
+        console.log('✓ License number found in number sequence:', formatted);
+        return formatted;
       }
     }
   }
@@ -144,179 +135,159 @@ const extractLicenseNumber = (fullText: string, lines: string[]): string => {
   return '';
 };
 
-const extractHolderName = (fullText: string, lines: string[]): string => {
-  // Look for name patterns
-  const nameKeywords = ['Name', 'नाम', 'Holder'];
-  
-  for (const line of lines) {
-    for (const keyword of nameKeywords) {
-      if (line.toLowerCase().includes(keyword.toLowerCase())) {
-        // Extract name after the keyword
-        const parts = line.split(new RegExp(keyword, 'i'));
-        if (parts.length > 1) {
-          const namePart = parts[1].replace(/[:\-\s]+/, ' ').trim();
-          if (namePart.length > 2 && /^[A-Za-z\s.'-]+$/.test(namePart)) {
-            return namePart;
+const extractHolderNameEnhanced = (text: string, lines: string[]): string => {
+  // Look for common name patterns in Nepal licenses
+  const namePatterns = [
+    /Name[:\s]+([A-Za-z\s.'-]+)/i,
+    /([A-Z][a-z]+\s+[A-Z][a-z]+(?:\s+[A-Z][a-z]+)?)/g,
+    /([A-Z][A-Z\s]+)/g
+  ];
+
+  for (const pattern of namePatterns) {
+    const matches = text.match(pattern);
+    if (matches) {
+      for (const match of matches) {
+        const name = match.replace(/Name[:\s]*/i, '').trim();
+        if (name.length >= 4 && name.length <= 50 && /^[A-Za-z\s.'-]+$/.test(name)) {
+          // Filter out common non-name words
+          const nonNameWords = ['GOVERNMENT', 'NEPAL', 'LICENSE', 'DRIVING', 'TRANSPORT', 'DEPARTMENT', 'MANAGEMENT'];
+          if (!nonNameWords.some(word => name.toUpperCase().includes(word))) {
+            console.log('✓ Holder name extracted:', name);
+            return name;
           }
         }
       }
     }
   }
 
-  // Look for capitalized words that might be names
-  for (const line of lines) {
-    const words = line.split(' ').filter(word => word.length > 2);
-    const capitalizedWords = words.filter(word => 
-      /^[A-Z][a-z]+$/.test(word) && 
-      !['License', 'Licence', 'Department', 'Transport', 'Management', 'Government', 'Nepal'].includes(word)
-    );
-    
-    if (capitalizedWords.length >= 2) {
-      const name = capitalizedWords.slice(0, 4).join(' ');
-      if (isValidNepalName(name)) {
-        return name;
-      }
-    }
+  // Look for capitalized words that could be names
+  const words = text.split(/\s+/);
+  const capitalizedWords = words.filter(word => 
+    /^[A-Z][a-z]+$/.test(word) && 
+    word.length > 2 && 
+    !['License', 'Nepal', 'Government', 'Department', 'Transport'].includes(word)
+  );
+
+  if (capitalizedWords.length >= 2) {
+    const name = capitalizedWords.slice(0, 3).join(' ');
+    console.log('✓ Name extracted from capitalized words:', name);
+    return name;
   }
 
   return '';
 };
 
-const extractDates = (fullText: string, lines: string[]): { issueDate?: string; expiryDate?: string } => {
+const extractDatesEnhanced = (text: string, lines: string[]): { issueDate?: string; expiryDate?: string } => {
   const dates: { issueDate?: string; expiryDate?: string } = {};
   
-  // Date patterns for Nepal (DD-MM-YYYY, DD/MM/YYYY)
+  // Enhanced date patterns
   const datePatterns = [
     /(\d{1,2}[-\/]\d{1,2}[-\/]\d{4})/g,
-    /(\d{4}[-\/]\d{1,2}[-\/]\d{1,2})/g
+    /(\d{4}[-\/]\d{1,2}[-\/]\d{1,2})/g,
+    /(\d{1,2}\s+\d{1,2}\s+\d{4})/g
   ];
 
   const foundDates: string[] = [];
   
   for (const pattern of datePatterns) {
-    const matches = fullText.match(pattern);
+    const matches = text.match(pattern);
     if (matches) {
       foundDates.push(...matches);
     }
   }
 
-  // Look for dates near keywords
-  const issueKeywords = ['Issue', 'Issued', 'जारी'];
-  const expiryKeywords = ['Expiry', 'Expires', 'Valid', 'Until', 'समाप्ति'];
+  // Convert and validate dates
+  const validDates = foundDates
+    .map(dateStr => {
+      const converted = convertToISODate(dateStr);
+      const date = new Date(converted);
+      return !isNaN(date.getTime()) && date.getFullYear() > 1990 && date.getFullYear() < 2050 
+        ? { original: dateStr, iso: converted, date } 
+        : null;
+    })
+    .filter(Boolean)
+    .sort((a, b) => a!.date.getTime() - b!.date.getTime());
 
-  for (const line of lines) {
-    const lineDate = line.match(/\d{1,2}[-\/]\d{1,2}[-\/]\d{4}/);
-    if (lineDate) {
-      const date = lineDate[0];
-      
-      // Check if it's near issue keywords
-      for (const keyword of issueKeywords) {
-        if (line.toLowerCase().includes(keyword.toLowerCase())) {
-          dates.issueDate = convertToISODate(date);
-          break;
-        }
-      }
-      
-      // Check if it's near expiry keywords
-      for (const keyword of expiryKeywords) {
-        if (line.toLowerCase().includes(keyword.toLowerCase())) {
-          dates.expiryDate = convertToISODate(date);
-          break;
-        }
-      }
-    }
-  }
-
-  // If we have dates but couldn't categorize them, use heuristics
-  if (!dates.issueDate && !dates.expiryDate && foundDates.length >= 2) {
-    const sortedDates = foundDates
-      .map(d => ({ original: d, date: new Date(convertToISODate(d) || d) }))
-      .filter(d => !isNaN(d.date.getTime()))
-      .sort((a, b) => a.date.getTime() - b.date.getTime());
-
-    if (sortedDates.length >= 2) {
-      dates.issueDate = convertToISODate(sortedDates[0].original);
-      dates.expiryDate = convertToISODate(sortedDates[sortedDates.length - 1].original);
-    }
+  if (validDates.length >= 2) {
+    dates.issueDate = validDates[0]!.iso;
+    dates.expiryDate = validDates[validDates.length - 1]!.iso;
+    console.log('✓ Dates extracted - Issue:', dates.issueDate, 'Expiry:', dates.expiryDate);
+  } else if (validDates.length === 1) {
+    // Assume single date is expiry date
+    dates.expiryDate = validDates[0]!.iso;
+    console.log('✓ Single date extracted as expiry:', dates.expiryDate);
   }
 
   return dates;
 };
 
 const convertToISODate = (dateString: string): string => {
-  // Handle Nepal date formats (DD-MM-YYYY, DD/MM/YYYY)
-  const parts = dateString.split(/[-\/]/);
+  const cleanDate = dateString.replace(/\s+/g, '-');
+  const parts = cleanDate.split(/[-\/]/);
+  
   if (parts.length === 3) {
-    const [day, month, year] = parts;
+    let [first, second, third] = parts;
     
-    // Check if it's already in ISO format (YYYY-MM-DD)
-    if (year.length === 4 && parseInt(year) > 1900) {
-      return `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
-    }
-    
-    // Convert from DD-MM-YYYY to YYYY-MM-DD
-    if (day.length <= 2 && month.length <= 2 && year.length === 4) {
-      return `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+    // Determine if it's DD-MM-YYYY or YYYY-MM-DD
+    if (third.length === 4) {
+      // DD-MM-YYYY format
+      return `${third}-${second.padStart(2, '0')}-${first.padStart(2, '0')}`;
+    } else if (first.length === 4) {
+      // YYYY-MM-DD format
+      return `${first}-${second.padStart(2, '0')}-${third.padStart(2, '0')}`;
     }
   }
   
   return dateString;
 };
 
-const extractIssuingAuthority = (fullText: string, lines: string[]): string => {
-  // Look for known Nepal authorities
-  for (const authority of ISSUING_AUTHORITIES) {
-    if (fullText.toLowerCase().includes(authority.toLowerCase())) {
-      return authority;
-    }
-  }
-
-  // Look for government-related keywords
-  const govKeywords = ['Department', 'Transport', 'Management', 'Government', 'Nepal', 'Office'];
+const extractIssuingAuthorityEnhanced = (text: string, lines: string[]): string => {
+  // Default Nepal authority
+  const defaultAuthority = 'Department of Transport Management, Government of Nepal';
   
-  for (const line of lines) {
-    const hasGovKeywords = govKeywords.some(keyword => 
-      line.toLowerCase().includes(keyword.toLowerCase())
-    );
-    
-    if (hasGovKeywords && line.length > 10 && line.length < 100) {
-      return line.trim();
+  // Look for government-related text
+  const govPatterns = [
+    /Department[^.]*Transport[^.]*Management/i,
+    /Government[^.]*Nepal/i,
+    /Transport[^.]*Department/i
+  ];
+
+  for (const pattern of govPatterns) {
+    const match = text.match(pattern);
+    if (match) {
+      console.log('✓ Issuing authority found in text:', match[0]);
+      return match[0].trim();
     }
   }
 
-  return 'Department of Transport Management';
+  console.log('✓ Issuing authority set for Nepal');
+  return defaultAuthority;
 };
 
-const extractAddress = (fullText: string, lines: string[]): string => {
-  // Use the Nepal-specific address extraction
-  const address = extractNepalAddress(fullText);
-  if (address) {
-    return address;
+const extractAddressEnhanced = (text: string, lines: string[]): string => {
+  // Look for address patterns
+  const addressPatterns = [
+    /Address[:\s]+([^.]+)/i,
+    /([A-Za-z\s,\-]+(?:Nepal|Kathmandu|Pokhara|Chitwan)[A-Za-z\s,\-]*)/i
+  ];
+
+  for (const pattern of addressPatterns) {
+    const match = text.match(pattern);
+    if (match) {
+      const address = match[1] || match[0];
+      if (address.length > 10 && address.length < 200) {
+        console.log('✓ Address extracted:', address.trim());
+        return address.trim();
+      }
+    }
   }
 
-  // Look for address keywords
-  const addressKeywords = ['Address', 'ठेगाना', 'Permanent', 'Temporary'];
-  
-  for (let i = 0; i < lines.length; i++) {
-    const line = lines[i];
-    
-    for (const keyword of addressKeywords) {
-      if (line.toLowerCase().includes(keyword.toLowerCase())) {
-        // Get address from this line and potentially next lines
-        let address = line.replace(new RegExp(keyword, 'i'), '').replace(/[:\-\s]+/, ' ').trim();
-        
-        // Include next line if it looks like address continuation
-        if (i + 1 < lines.length) {
-          const nextLine = lines[i + 1];
-          if (nextLine.length > 5 && !nextLine.includes('Phone') && !nextLine.includes('Category')) {
-            address += ', ' + nextLine;
-          }
-        }
-        
-        if (address.length > 5) {
-          return address;
-        }
-      }
+  // Look for location names
+  const locationWords = ['Kathmandu', 'Pokhara', 'Chitwan', 'Lalitpur', 'Bhaktapur', 'Nepal'];
+  for (const line of lines) {
+    if (locationWords.some(loc => line.includes(loc)) && line.length > 5) {
+      console.log('✓ Address found by location:', line);
+      return line;
     }
   }
 
@@ -326,57 +297,44 @@ const extractAddress = (fullText: string, lines: string[]): string => {
 const validateAndCleanData = (data: Partial<LicenseData>): Partial<LicenseData> => {
   const cleaned: Partial<LicenseData> = {};
 
-  // Validate and clean license number
-  if (data.licenseNumber) {
-    const validation = validateNepalLicenseNumber(data.licenseNumber);
-    if (validation.isValid) {
-      cleaned.licenseNumber = data.licenseNumber.trim();
-    }
+  // Validate license number
+  if (data.licenseNumber && data.licenseNumber.length >= 9) {
+    cleaned.licenseNumber = data.licenseNumber.trim();
   }
 
-  // Validate and clean name
-  if (data.holderName) {
-    const name = data.holderName.trim();
-    if (name.length >= 2 && name.length <= 100 && /^[A-Za-z\s.'-]+$/.test(name)) {
-      cleaned.holderName = name;
-    }
+  // Validate name
+  if (data.holderName && data.holderName.length >= 2 && /^[A-Za-z\s.'-]+$/.test(data.holderName)) {
+    cleaned.holderName = data.holderName.trim();
   }
 
   // Validate dates
   if (data.issueDate) {
     const date = new Date(data.issueDate);
-    if (!isNaN(date.getTime()) && date.getFullYear() >= 1950) {
+    if (!isNaN(date.getTime())) {
       cleaned.issueDate = data.issueDate;
     }
   }
 
   if (data.expiryDate) {
     const date = new Date(data.expiryDate);
-    if (!isNaN(date.getTime()) && date.getFullYear() <= 2050) {
+    if (!isNaN(date.getTime())) {
       cleaned.expiryDate = data.expiryDate;
     }
   }
 
-  // Validate issuing authority
+  // Always include issuing authority
   if (data.issuingAuthority) {
-    const authority = data.issuingAuthority.trim();
-    if (authority.length >= 3 && authority.length <= 200) {
-      cleaned.issuingAuthority = authority;
-    }
+    cleaned.issuingAuthority = data.issuingAuthority.trim();
   }
 
-  // Clean address
-  if (data.address) {
-    const address = data.address.trim();
-    if (address.length >= 5 && address.length <= 500) {
-      cleaned.address = address;
-    }
+  // Validate address
+  if (data.address && data.address.length >= 5) {
+    cleaned.address = data.address.trim();
   }
 
   return cleaned;
 };
 
-// Enhanced OCR preprocessing for better accuracy
 export const preprocessImageForOCR = async (imageFile: File): Promise<File> => {
   return new Promise((resolve, reject) => {
     const canvas = document.createElement('canvas');
@@ -390,15 +348,13 @@ export const preprocessImageForOCR = async (imageFile: File): Promise<File> => {
 
     img.onload = () => {
       try {
-        // Set canvas size
         canvas.width = img.width;
         canvas.height = img.height;
 
-        // Apply image enhancements for better OCR
-        ctx.filter = 'contrast(1.2) brightness(1.1)';
+        // Apply image enhancements
+        ctx.filter = 'contrast(1.3) brightness(1.2) saturate(0.8)';
         ctx.drawImage(img, 0, 0);
 
-        // Convert back to file
         canvas.toBlob((blob) => {
           if (blob) {
             const enhancedFile = new File([blob], imageFile.name, {
