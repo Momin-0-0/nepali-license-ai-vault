@@ -6,10 +6,14 @@ export interface LicenseData {
   expiryDate: string;
   issuingAuthority: string;
   address: string;
-  // Additional Nepal license fields
-  bloodGroup?: string;
+  // Enhanced Nepal license fields matching the new format
   dateOfBirth?: string;
+  fatherOrHusbandName?: string;
   citizenshipNo?: string;
+  passportNo?: string;
   phoneNo?: string;
+  bloodGroup?: 'A+' | 'A-' | 'B+' | 'B-' | 'O+' | 'O-' | 'AB+' | 'AB-';
   category?: string;
+  photoUrl?: string;
+  signatureUrl?: string;
 }

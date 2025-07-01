@@ -20,7 +20,7 @@ export const processImageWithOCR = async (
   let worker: Tesseract.Worker | null = null;
   
   try {
-    onProgress?.('Initializing OCR engine for Nepal license...');
+    onProgress?.('Initializing enhanced OCR engine for comprehensive Nepal license format...');
     
     // Enhanced preprocessing for Nepal license
     const preprocessedImage = await preprocessNepalLicenseImage(imageFile);
@@ -28,19 +28,19 @@ export const processImageWithOCR = async (
     // Initialize Tesseract worker
     worker = await createWorker('eng');
     
-    // Configure for Nepal license text recognition
+    // Configure for comprehensive Nepal license text recognition
     await worker.setParameters({
       tessedit_char_whitelist: 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-+:., /',
       tessedit_pageseg_mode: PSM.SINGLE_BLOCK,
       preserve_interword_spaces: '1'
     });
     
-    onProgress?.('Analyzing Nepal license image...');
+    onProgress?.('Analyzing comprehensive Nepal license format...');
     
     // Perform OCR with detailed output
     const { data } = await worker.recognize(preprocessedImage);
     
-    onProgress?.('Extracting license fields...');
+    onProgress?.('Extracting all license fields including enhanced metadata...');
     
     // Extract structured data using advanced algorithms
     // Access words and lines from the blocks structure
@@ -65,20 +65,20 @@ export const processImageWithOCR = async (
       }
     }
     
-    const extractedData = await performAdvancedExtractionForNepal(
+    const extractedData = await performComprehensiveExtractionForNepal(
       data.text || '',
       words,
       lines,
       data.confidence || 0
     );
     
-    onProgress?.('Validation and cleanup...');
+    onProgress?.('Final validation and cleanup of comprehensive data...');
     
     return extractedData;
     
   } catch (error) {
-    console.error('OCR Processing Error:', error);
-    throw new Error(`OCR failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    console.error('Enhanced OCR Processing Error:', error);
+    throw new Error(`Enhanced OCR failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
   } finally {
     if (worker) {
       await worker.terminate();
@@ -90,7 +90,7 @@ export const preprocessImageForOCR = async (imageFile: File): Promise<File> => {
   return preprocessNepalLicenseImage(imageFile);
 };
 
-export const performAdvancedExtractionForNepal = async (
+export const performComprehensiveExtractionForNepal = async (
   text: string, 
   words: any[], 
   lines: any[],
@@ -99,13 +99,13 @@ export const performAdvancedExtractionForNepal = async (
   const cleanText = text.replace(/\s+/g, ' ').trim();
   const textLines = text.split('\n').map(line => line.trim()).filter(line => line.length > 0);
   
-  console.log('=== Advanced Nepal License Pattern Extraction ===');
+  console.log('=== Comprehensive Nepal License Pattern Extraction ===');
   console.log('Processing lines:', textLines.length);
   console.log('Clean text:', cleanText);
   
   const extractedData: Partial<LicenseData> = {};
 
-  // Stage 1: Enhanced pattern-based extraction
+  // Stage 1: Enhanced pattern-based extraction for all fields
   for (const [field, patterns] of Object.entries(NEPAL_LICENSE_PATTERNS)) {
     for (const pattern of patterns) {
       const matches = cleanText.match(pattern);
@@ -134,9 +134,19 @@ export const performAdvancedExtractionForNepal = async (
                 case 'dateOfBirth':
                   extractedData.dateOfBirth = convertNepalDateToISO(value);
                   break;
+                case 'fatherOrHusbandName':
+                  if (value.length >= 3 && /^[A-Za-z\s.]+$/.test(value)) {
+                    extractedData.fatherOrHusbandName = value.replace(/\s+/g, ' ').trim();
+                  }
+                  break;
                 case 'citizenshipNo':
                   if (/^\d{10,15}$/.test(value)) {
                     extractedData.citizenshipNo = value;
+                  }
+                  break;
+                case 'passportNo':
+                  if (/^[A-Z0-9]{8,15}$/.test(value)) {
+                    extractedData.passportNo = value;
                   }
                   break;
                 case 'phoneNo':
@@ -144,10 +154,15 @@ export const performAdvancedExtractionForNepal = async (
                     extractedData.phoneNo = value;
                   }
                   break;
-                case 'issueDate':
+                case 'bloodGroup':
+                  if (['A+', 'A-', 'B+', 'B-', 'O+', 'O-', 'AB+', 'AB-'].includes(value)) {
+                    extractedData.bloodGroup = value as any;
+                  }
+                  break;
+                case 'dateOfIssue':
                   extractedData.issueDate = convertNepalDateToISO(value);
                   break;
-                case 'expiryDate':
+                case 'dateOfExpiry':
                   extractedData.expiryDate = convertNepalDateToISO(value);
                   break;
                 case 'category':
@@ -155,9 +170,9 @@ export const performAdvancedExtractionForNepal = async (
                     extractedData.category = value;
                   }
                   break;
-                case 'bloodGroup':
-                  if (/^[ABO]{1,2}[+-]?$/.test(value)) {
-                    extractedData.bloodGroup = value;
+                case 'issuedBy':
+                  if (value.length >= 5) {
+                    extractedData.issuingAuthority = value.replace(/\s+/g, ' ').trim();
                   }
                   break;
               }
@@ -199,12 +214,17 @@ export const performAdvancedExtractionForNepal = async (
     });
   }
 
-  // Stage 4: Set default issuing authority
+  // Stage 4: Set default issuing authority if not found
   if (!extractedData.issuingAuthority) {
     extractedData.issuingAuthority = 'Department of Transport Management, Government of Nepal';
   }
 
   // Stage 5: Final validation and cleanup
-  return validateAndCleanupNepalData(extractedData);
+  const validatedData = validateAndCleanupNepalData(extractedData);
+  
+  console.log('=== Extraction Summary ===');
+  console.log('Fields extracted:', Object.keys(validatedData).length);
+  console.log('Extracted data:', validatedData);
+  
+  return validatedData;
 };
-

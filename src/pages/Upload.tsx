@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { CheckCircle, CreditCard, Cpu, Shield, Zap } from "lucide-react";
+import { CheckCircle, CreditCard, Cpu, Shield, Zap, User, MapPin, Phone, Calendar, Droplets } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useOfflineSync } from "@/hooks/useOfflineSync";
 import { useLocalStorage } from "@/hooks/useLocalStorage";
@@ -21,7 +21,14 @@ const Upload = () => {
     issueDate: '',
     expiryDate: '',
     issuingAuthority: '',
-    address: ''
+    address: '',
+    dateOfBirth: '',
+    fatherOrHusbandName: '',
+    citizenshipNo: '',
+    passportNo: '',
+    phoneNo: '',
+    bloodGroup: '',
+    category: ''
   });
   const [uploadedImage, setUploadedImage] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
@@ -29,6 +36,7 @@ const Upload = () => {
   const [progressText, setProgressText] = useState('Initializing...');
   const [currentStep, setCurrentStep] = useState(1);
   const [extractedFieldsCount, setExtractedFieldsCount] = useState(0);
+  const [extractionDetails, setExtractionDetails] = useState<{[key: string]: boolean}>({});
   const navigate = useNavigate();
   const { toast } = useToast();
   const { isOnline } = useOfflineSync();
@@ -41,13 +49,13 @@ const Upload = () => {
   }, [user, navigate]);
 
   const handleImageUpload = async (file: File) => {
-    console.log('Modern Nepal license image uploaded:', file);
+    console.log('Comprehensive Nepal license image uploaded:', file);
     setCurrentStep(2);
     setIsProcessing(true);
-    setProgressText('Initializing advanced OCR for modern Nepal license format...');
+    setProgressText('Initializing comprehensive AI OCR for Nepal license format...');
 
     try {
-      // Process image with enhanced OCR specifically for modern Nepal format
+      // Process image with enhanced comprehensive OCR
       const extractedData = await processImageWithOCR(file, (progress) => {
         setProgressText(progress);
       });
@@ -57,19 +65,43 @@ const Upload = () => {
         const mergedData = { ...licenseData, ...extractedData };
         setLicenseData(mergedData);
         
-        const fieldsExtracted = Object.keys(extractedData).filter(key => 
-          extractedData[key as keyof typeof extractedData] && 
-          extractedData[key as keyof typeof extractedData] !== ''
-        ).length;
+        // Track which fields were extracted
+        const extractionStatus: {[key: string]: boolean} = {};
+        const fieldLabels: {[key: string]: string} = {
+          licenseNumber: 'License Number',
+          holderName: 'Holder Name',
+          address: 'Address',
+          dateOfBirth: 'Date of Birth',
+          fatherOrHusbandName: 'Father/Husband Name',
+          citizenshipNo: 'Citizenship Number',
+          passportNo: 'Passport Number',
+          phoneNo: 'Phone Number',
+          bloodGroup: 'Blood Group',
+          issueDate: 'Issue Date',
+          expiryDate: 'Expiry Date',
+          category: 'Category',
+          issuingAuthority: 'Issuing Authority'
+        };
         
-        setExtractedFieldsCount(fieldsExtracted);
-        
-        toast({
-          title: "Smart Extraction Successful! 🎉",
-          description: `Advanced AI extracted ${fieldsExtracted} fields from your modern Nepal license. Accuracy: ${Math.round((fieldsExtracted / 6) * 100)}%`,
+        Object.keys(fieldLabels).forEach(key => {
+          extractionStatus[key] = !!(extractedData[key as keyof typeof extractedData] && 
+            extractedData[key as keyof typeof extractedData] !== '');
         });
         
-        console.log('✓ Modern Nepal license auto-fill completed:', fieldsExtracted, 'fields extracted');
+        setExtractionDetails(extractionStatus);
+        
+        const fieldsExtracted = Object.values(extractionStatus).filter(Boolean).length;
+        setExtractedFieldsCount(fieldsExtracted);
+        
+        const accuracy = Math.round((fieldsExtracted / Object.keys(fieldLabels).length) * 100);
+        
+        toast({
+          title: "🎉 Comprehensive Smart Extraction Complete!",
+          description: `Advanced AI extracted ${fieldsExtracted}/${Object.keys(fieldLabels).length} fields from your Nepal license. Accuracy: ${accuracy}%`,
+        });
+        
+        console.log('✓ Comprehensive Nepal license auto-fill completed:', fieldsExtracted, 'fields extracted');
+        console.log('Extraction details:', extractionStatus);
       } else {
         toast({
           title: "Partial Extraction",
@@ -78,15 +110,15 @@ const Upload = () => {
         });
       }
     } catch (error: any) {
-      console.error("Enhanced Modern Nepal OCR Error:", error);
+      console.error("Comprehensive Nepal OCR Error:", error);
       toast({
         title: "Smart Extraction Failed",
-        description: "Advanced OCR encountered issues. Please ensure good lighting and try again.",
+        description: "Advanced comprehensive OCR encountered issues. Please ensure good lighting and try again.",
         variant: "destructive",
       });
     } finally {
       setIsProcessing(false);
-      setProgressText('Smart extraction complete - Ready for verification');
+      setProgressText('Comprehensive smart extraction complete - Ready for verification');
     }
   };
 
@@ -101,7 +133,7 @@ const Upload = () => {
     }
 
     setIsProcessing(true);
-    setProgressText('Starting OCR...');
+    setProgressText('Starting comprehensive OCR...');
     setCurrentStep(2);
 
     try {
@@ -133,7 +165,7 @@ const Upload = () => {
 
   const handleSubmit = async () => {
     setIsSubmitting(true);
-    setProgressText('Submitting data...');
+    setProgressText('Submitting comprehensive license data...');
 
     try {
       validateLicenseData(licenseData);
@@ -148,8 +180,8 @@ const Upload = () => {
       localStorage.setItem('licenses', JSON.stringify(licenses));
 
       toast({
-        title: "License Saved",
-        description: "Your license has been successfully saved.",
+        title: "License Saved Successfully",
+        description: "Your comprehensive Nepal license data has been securely saved.",
       });
       setCurrentStep(3);
     } catch (error: any) {
@@ -171,7 +203,7 @@ const Upload = () => {
 
       <div className="container mx-auto px-4 py-8">
         <div className="max-w-4xl mx-auto">
-          {/* Enhanced Header for Modern License Format */}
+          {/* Enhanced Header for Comprehensive License Format */}
           <div className="text-center mb-8">
             <div className="flex items-center justify-center gap-3 mb-4">
               <div className="relative">
@@ -182,37 +214,44 @@ const Upload = () => {
               <Zap className="w-8 h-8 text-yellow-500" />
             </div>
             <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-600 via-green-600 to-orange-600 bg-clip-text text-transparent mb-4">
-              Smart Nepal License Scanner
+              Comprehensive Nepal License Scanner
             </h1>
             <p className="text-xl text-gray-700 mb-2">
-              Advanced AI-powered extraction for modern chip-enabled Nepal licenses
+              Advanced AI-powered extraction for complete Nepal license data including personal details
             </p>
             <p className="text-gray-600 max-w-2xl mx-auto">
-              Our enhanced OCR algorithm is specifically optimized for the latest Nepal driving license format with chip card technology and security features
+              Our enhanced OCR algorithm extracts 13+ fields from modern Nepal driving licenses including personal information, dates, and official details
             </p>
           </div>
 
           {/* Enhanced Feature Highlights */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
             <Card className="border-blue-200 bg-blue-50">
               <CardContent className="p-4 text-center">
-                <CreditCard className="w-8 h-8 text-blue-600 mx-auto mb-2" />
-                <h3 className="font-semibold text-blue-800">Chip Card Ready</h3>
-                <p className="text-sm text-blue-600">Optimized for modern Nepal license format</p>
+                <User className="w-8 h-8 text-blue-600 mx-auto mb-2" />
+                <h3 className="font-semibold text-blue-800">Personal Data</h3>
+                <p className="text-sm text-blue-600">Name, Father/Husband, DOB</p>
               </CardContent>
             </Card>
             <Card className="border-green-200 bg-green-50">
               <CardContent className="p-4 text-center">
-                <Zap className="w-8 h-8 text-green-600 mx-auto mb-2" />
-                <h3 className="font-semibold text-green-800">99% Accuracy</h3>
-                <p className="text-sm text-green-600">Advanced AI with 30+ years of algorithm expertise</p>
+                <MapPin className="w-8 h-8 text-green-600 mx-auto mb-2" />
+                <h3 className="font-semibold text-green-800">Location Info</h3>
+                <p className="text-sm text-green-600">Address, Citizenship No.</p>
               </CardContent>
             </Card>
-            <Card className="border-orange-200 bg-orange-50">
+            <Card className="border-purple-200 bg-purple-50">
               <CardContent className="p-4 text-center">
-                <Shield className="w-8 h-8 text-orange-600 mx-auto mb-2" />
-                <h3 className="font-semibold text-orange-800">Secure Processing</h3>
-                <p className="text-sm text-orange-600">Enterprise-grade security for your data</p>
+                <Phone className="w-8 h-8 text-purple-600 mx-auto mb-2" />
+                <h3 className="font-semibold text-purple-800">Contact Data</h3>
+                <p className="text-sm text-purple-600">Phone, Passport Numbers</p>
+              </CardContent>
+            </Card>
+            <Card className="border-red-200 bg-red-50">
+              <CardContent className="p-4 text-center">
+                <Droplets className="w-8 h-8 text-red-600 mx-auto mb-2" />
+                <h3 className="font-semibold text-red-800">Medical Info</h3>
+                <p className="text-sm text-red-600">Blood Group, Category</p>
               </CardContent>
             </Card>
           </div>
@@ -244,14 +283,14 @@ const Upload = () => {
             {/* Enhanced Step Labels */}
             <div className="text-center space-y-2">
               <h2 className="text-2xl font-semibold text-gray-800">
-                {currentStep === 1 && "Step 1: Upload Modern Nepal License"}
-                {currentStep === 2 && "Step 2: AI Smart Verification"}
+                {currentStep === 1 && "Step 1: Upload Nepal License"}
+                {currentStep === 2 && "Step 2: AI Comprehensive Verification"}
                 {currentStep === 3 && "Step 3: Secure Storage Complete"}
               </h2>
               <p className="text-gray-600">
-                {currentStep === 1 && "Upload your chip-enabled Nepal license for advanced AI extraction"}
-                {currentStep === 2 && `Verify ${extractedFieldsCount} AI-extracted fields with 99% accuracy`}
-                {currentStep === 3 && "Your modern Nepal license has been securely processed and stored"}
+                {currentStep === 1 && "Upload your Nepal license for comprehensive AI data extraction"}
+                {currentStep === 2 && `Verify ${extractedFieldsCount}/13+ AI-extracted fields with advanced accuracy`}
+                {currentStep === 3 && "Your complete Nepal license data has been securely processed and stored"}
               </p>
             </div>
 
@@ -266,7 +305,7 @@ const Upload = () => {
               />
             )}
 
-            {/* Enhanced Processing Status */}
+            {/* Enhanced Processing Status with Field Details */}
             {isProcessing && (
               <Card className="border-2 border-blue-200 bg-gradient-to-r from-blue-50 to-green-50">
                 <CardContent className="p-6">
@@ -277,7 +316,7 @@ const Upload = () => {
                     </div>
                     <div className="text-center">
                       <p className="text-lg font-medium text-blue-800">{progressText}</p>
-                      <p className="text-sm text-blue-600 mt-1">Advanced AI analyzing modern Nepal license format...</p>
+                      <p className="text-sm text-blue-600 mt-1">Advanced AI analyzing comprehensive Nepal license format...</p>
                     </div>
                   </div>
                   <div className="mt-4">
@@ -299,14 +338,53 @@ const Upload = () => {
                 {isProcessing ? (
                   <LicenseFormSkeleton />
                 ) : (
-                  <LicenseForm
-                    licenseData={licenseData}
-                    onDataChange={setLicenseData}
-                    onSubmit={handleSubmit}
-                    onCancel={() => setCurrentStep(1)}
-                    isProcessing={isSubmitting}
-                    disabled={isSubmitting}
-                  />
+                  <>
+                    {/* Extraction Summary */}
+                    <Card className="border-green-200 bg-green-50/30">
+                      <CardContent className="p-6">
+                        <h3 className="text-lg font-semibold text-green-800 mb-4">Extraction Summary</h3>
+                        <div className="grid grid-cols-2 md:grid-cols-3 gap-3 text-sm">
+                          {Object.entries(extractionDetails).map(([field, extracted]) => {
+                            const labels: {[key: string]: string} = {
+                              licenseNumber: 'License Number',
+                              holderName: 'Holder Name',
+                              address: 'Address',
+                              dateOfBirth: 'Date of Birth',
+                              fatherOrHusbandName: 'Father/Husband',
+                              citizenshipNo: 'Citizenship No.',
+                              passportNo: 'Passport No.',
+                              phoneNo: 'Phone Number',
+                              bloodGroup: 'Blood Group',
+                              issueDate: 'Issue Date',
+                              expiryDate: 'Expiry Date',
+                              category: 'Category',
+                              issuingAuthority: 'Issuing Authority'
+                            };
+                            return (
+                              <div key={field} className={`flex items-center gap-2 p-2 rounded ${
+                                extracted ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-600'
+                              }`}>
+                                {extracted ? 
+                                  <CheckCircle className="w-4 h-4 text-green-600" /> : 
+                                  <div className="w-4 h-4 border-2 border-gray-400 rounded-full"></div>
+                                }
+                                <span className="text-xs">{labels[field]}</span>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </CardContent>
+                    </Card>
+                    
+                    <LicenseForm
+                      licenseData={licenseData}
+                      onDataChange={setLicenseData}
+                      onSubmit={handleSubmit}
+                      onCancel={() => setCurrentStep(1)}
+                      isProcessing={isSubmitting}
+                      disabled={isSubmitting}
+                    />
+                  </>
                 )}
               </>
             )}
@@ -318,27 +396,27 @@ const Upload = () => {
                   <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
                     <CheckCircle className="w-10 h-10 text-green-600" />
                   </div>
-                  <h3 className="text-3xl font-bold text-green-800 mb-2">Smart Processing Complete! 🎉</h3>
+                  <h3 className="text-3xl font-bold text-green-800 mb-2">Comprehensive Processing Complete! 🎉</h3>
                   <p className="text-green-700 mb-4">
-                    Your modern Nepal driving license has been successfully processed with advanced AI technology.
+                    Your complete Nepal driving license data has been successfully processed with advanced AI technology.
                   </p>
                   <div className="bg-white rounded-xl p-6 mb-6 border border-green-200">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
                       <div className="flex items-center gap-2">
                         <Zap className="w-4 h-4 text-yellow-500" />
-                        <span><strong>AI Accuracy:</strong> {Math.round((extractedFieldsCount / 6) * 100)}%</span>
+                        <span><strong>AI Accuracy:</strong> {Math.round((extractedFieldsCount / 13) * 100)}%</span>
                       </div>
                       <div className="flex items-center gap-2">
                         <CreditCard className="w-4 h-4 text-blue-500" />
-                        <span><strong>Fields Extracted:</strong> {extractedFieldsCount}/6</span>
+                        <span><strong>Fields Extracted:</strong> {extractedFieldsCount}/13+</span>
                       </div>
                       <div className="flex items-center gap-2">
                         <Shield className="w-4 h-4 text-green-500" />
                         <span><strong>Security:</strong> Enterprise Grade</span>
                       </div>
                       <div className="flex items-center gap-2">
-                        <Cpu className="w-4 h-4 text-orange-500" />
-                        <span><strong>Format:</strong> Modern Chip Card</span>
+                        <User className="w-4 h-4 text-purple-500" />
+                        <span><strong>Data Type:</strong> Comprehensive</span>
                       </div>
                     </div>
                   </div>
@@ -352,13 +430,21 @@ const Upload = () => {
                         setCurrentStep(1);
                         setUploadedImage('');
                         setExtractedFieldsCount(0);
+                        setExtractionDetails({});
                         setLicenseData({
                           licenseNumber: '',
                           holderName: '',
                           issueDate: '',
                           expiryDate: '',
                           issuingAuthority: '',
-                          address: ''
+                          address: '',
+                          dateOfBirth: '',
+                          fatherOrHusbandName: '',
+                          citizenshipNo: '',
+                          passportNo: '',
+                          phoneNo: '',
+                          bloodGroup: '',
+                          category: ''
                         });
                       }}
                       className="border-green-200 text-green-700 hover:bg-green-50"
@@ -378,7 +464,7 @@ const Upload = () => {
                   disabled={isProcessing || !uploadedImage}
                   className="bg-gradient-to-r from-blue-600 to-green-600 hover:from-blue-700 hover:to-green-700 px-8 py-3 text-lg font-semibold"
                 >
-                  {currentStep === 1 ? 'Extract License Data' : 'Process License'}
+                  {currentStep === 1 ? 'Extract Comprehensive License Data' : 'Process Complete License'}
                 </Button>
               </div>
             )}
