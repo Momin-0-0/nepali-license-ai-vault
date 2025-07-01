@@ -1,5 +1,5 @@
 
-import { createWorker } from 'tesseract.js';
+import { createWorker, PSM } from 'tesseract.js';
 import { LicenseData } from '@/types/license';
 import { NEPAL_LICENSE_PATTERNS } from './patterns';
 import { WordData, LineData, OCRProgress } from './types';
@@ -31,7 +31,7 @@ export const processImageWithOCR = async (
     // Configure for Nepal license text recognition
     await worker.setParameters({
       tessedit_char_whitelist: 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-+:., /',
-      tessedit_pageseg_mode: '6', // Uniform block of text
+      tessedit_pageseg_mode: PSM.SINGLE_UNIFORM_BLOCK,
       preserve_interword_spaces: '1'
     });
     
@@ -70,8 +70,8 @@ export const preprocessImageForOCR = async (imageFile: File): Promise<File> => {
 
 export const performAdvancedExtractionForNepal = async (
   text: string, 
-  words: WordData[], 
-  lines: LineData[],
+  words: any[], 
+  lines: any[],
   confidence: number
 ): Promise<Partial<LicenseData>> => {
   const cleanText = text.replace(/\s+/g, ' ').trim();
@@ -161,9 +161,15 @@ export const performAdvancedExtractionForNepal = async (
     }
   });
 
-  // Stage 3: Word positioning analysis
-  if (words.length > 0) {
-    const positionBasedData = extractFromWordPositions(words);
+  // Stage 3: Word positioning analysis (only if words data is available)
+  if (words && words.length > 0) {
+    const wordData: WordData[] = words.map((word: any) => ({
+      text: word.text || '',
+      confidence: word.confidence || 0,
+      bbox: word.bbox || {}
+    }));
+    
+    const positionBasedData = extractFromWordPositions(wordData);
     Object.keys(positionBasedData).forEach(key => {
       if (!extractedData[key as keyof typeof extractedData] && positionBasedData[key as keyof typeof positionBasedData]) {
         (extractedData as any)[key] = positionBasedData[key as keyof typeof positionBasedData];
