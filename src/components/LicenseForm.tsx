@@ -167,8 +167,8 @@ const LicenseForm = ({
     let hasErrors = false;
     
     requiredFields.forEach(field => {
-      const value = licenseData[field];
-      const isValid = validateField(field, typeof value === 'string' ? value : value?.toString());
+      const value = getFieldValue(field);
+      const isValid = validateField(field, value);
       if (!isValid) hasErrors = true;
       setTouched(prev => ({ ...prev, [field]: true }));
     });
