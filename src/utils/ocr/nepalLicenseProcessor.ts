@@ -102,130 +102,81 @@ export const performComprehensiveExtractionForNepal = async (
   console.log('=== Comprehensive Nepal License Pattern Extraction ===');
   console.log('Processing lines:', textLines.length);
   console.log('Clean text:', cleanText);
+  console.log('Original text lines:', textLines);
   
   const extractedData: Partial<LicenseData> = {};
 
-  // Stage 1: Enhanced pattern-based extraction for all fields with focus on missing fields
+  // Stage 1: Advanced pattern-based extraction with better regex patterns
   
-  // Special handling for license number from the OCR text
+  // Enhanced license number extraction with multiple attempts
   const licensePatterns = [
-    /D\.?L\.?\s*No\.?\s*(\d{2}-?\d{2,3}-?\d{6,8})/i,
-    /License.*No\.?\s*(\d{2}-?\d{2,3}-?\d{6,8})/i,
-    /(\d{2}-\d{2,3}-\d{6,8})/,
-    /(\d{11,12})/
+    /D\.?L\.?\s*No\.?\s*[:\-]?\s*(\d{2}-\d{2,3}-\d{6,8})/gi,
+    /License.*No\.?\s*[:\-]?\s*(\d{2}-\d{2,3}-\d{6,8})/gi,
+    /(\d{2}-\d{2,3}-\d{6,8})(?!\d)/g,
+    /D\.?L\.?\s*No\.?\s*[:\-]?\s*(\d{11,12})/gi,
+    /(\d{11,12})(?=\s|$)/g  // Standalone 11-12 digit numbers
   ];
   
   for (const pattern of licensePatterns) {
-    const match = cleanText.match(pattern);
-    if (match) {
-      const licenseNum = match[1] || match[0];
+    let match;
+    pattern.lastIndex = 0; // Reset regex
+    while ((match = pattern.exec(cleanText)) !== null) {
+      const licenseNum = match[1];
+      console.log('Testing license number:', licenseNum);
       if (validateNepalLicenseNumber(licenseNum)) {
         extractedData.licenseNumber = formatNepalLicenseNumber(licenseNum);
         console.log('✓ License number found:', extractedData.licenseNumber);
         break;
       }
     }
+    if (extractedData.licenseNumber) break;
   }
   
-  // Special handling for dates - look for date patterns around D.O.I and D.O.E
-  const datePatterns = [
-    /D\.?O\.?I\.?[:\s]*(\d{1,2}[-\/]\d{1,2}[-\/]\d{4})/i, // Issue date
-    /D\.?O\.?E\.?[:\s]*(\d{1,2}[-\/]\d{1,2}[-\/]\d{4})/i, // Expiry date
-    /Issue.*Date[:\s]*(\d{1,2}[-\/]\d{1,2}[-\/]\d{4})/i,
-    /Expiry.*Date[:\s]*(\d{1,2}[-\/]\d{1,2}[-\/]\d{4})/i,
-    /Valid.*Till[:\s]*(\d{1,2}[-\/]\d{1,2}[-\/]\d{4})/i
+  // Enhanced date extraction with context-aware patterns
+  const dateExtractionPatterns = [
+    {
+      field: 'issueDate',
+      patterns: [
+        /D\.?O\.?I\.?\s*[:\-]?\s*(\d{1,2}[-\/]\d{1,2}[-\/]\d{4})/gi,
+        /Issue.*Date\s*[:\-]?\s*(\d{1,2}[-\/]\d{1,2}[-\/]\d{4})/gi,
+        /(\d{1,2}[-\/]\d{1,2}[-\/]\d{4})(?=.*(?:D\.?O\.?E|Expiry|Valid))/gi
+      ]
+    },
+    {
+      field: 'expiryDate', 
+      patterns: [
+        /D\.?O\.?E\.?\s*[:\-]?\s*(\d{1,2}[-\/]\d{1,2}[-\/]\d{4})/gi,
+        /Expiry.*Date\s*[:\-]?\s*(\d{1,2}[-\/]\d{1,2}[-\/]\d{4})/gi,
+        /Valid.*Till\s*[:\-]?\s*(\d{1,2}[-\/]\d{1,2}[-\/]\d{4})/gi,
+        /(\d{1,2}[-\/]\d{1,2}[-\/]\d{4})(?=.*(?:Phone|Category|Issued))/gi
+      ]
+    },
+    {
+      field: 'dateOfBirth',
+      patterns: [
+        /D\.?O\.?B\.?\s*[:\-]?\s*(\d{1,2}[-\/]\d{1,2}[-\/]\d{4})/gi,
+        /Birth.*Date\s*[:\-]?\s*(\d{1,2}[-\/]\d{1,2}[-\/]\d{4})/gi
+      ]
+    }
   ];
   
-  for (const pattern of datePatterns) {
-    const match = cleanText.match(pattern);
-    if (match) {
-      const dateStr = match[1];
-      const isoDate = convertNepalDateToISO(dateStr);
-      
-      if (pattern.source.includes('D.O.I') || pattern.source.includes('Issue')) {
-        extractedData.issueDate = isoDate;
-        console.log('✓ Issue date found:', extractedData.issueDate);
-      } else if (pattern.source.includes('D.O.E') || pattern.source.includes('Expiry') || pattern.source.includes('Valid')) {
-        extractedData.expiryDate = isoDate;
-        console.log('✓ Expiry date found:', extractedData.expiryDate);
-      }
-    }
-  }
-
-  // Continue with existing pattern-based extraction for other fields
-  for (const [field, patterns] of Object.entries(NEPAL_LICENSE_PATTERNS)) {
-    if (extractedData[field as keyof LicenseData]) continue; // Skip if already found
-    
+  for (const { field, patterns } of dateExtractionPatterns) {
     for (const pattern of patterns) {
-      const matches = cleanText.match(pattern);
-      if (matches) {
-        for (const match of matches) {
-          const groups = pattern.exec(match);
-          if (groups && groups.length > 1) {
-            const value = groups[groups.length - 1].trim();
-            if (value && value.length > 0) {
-              switch (field) {
-                case 'holderName':
-                  if (value.length >= 3 && /^[A-Za-z\s.]+$/.test(value)) {
-                    extractedData.holderName = value.replace(/\s+/g, ' ').trim();
-                  }
-                  break;
-                case 'address':
-                  if (value.length >= 5) {
-                    extractedData.address = value.replace(/\s+/g, ' ').trim();
-                  }
-                  break;
-                case 'dateOfBirth':
-                  extractedData.dateOfBirth = convertNepalDateToISO(value);
-                  break;
-                case 'fatherOrHusbandName':
-                  if (value.length >= 3 && /^[A-Za-z\s.]+$/.test(value)) {
-                    extractedData.fatherOrHusbandName = value.replace(/\s+/g, ' ').trim();
-                  }
-                  break;
-                case 'citizenshipNo':
-                  if (/^\d{10,15}$/.test(value)) {
-                    extractedData.citizenshipNo = value;
-                  }
-                  break;
-                case 'passportNo':
-                  if (/^[A-Z0-9]{8,15}$/.test(value)) {
-                    extractedData.passportNo = value;
-                  }
-                  break;
-                case 'phoneNo':
-                  if (/^98\d{8}$/.test(value) || /^\d{10}$/.test(value)) {
-                    extractedData.phoneNo = value;
-                  }
-                  break;
-                case 'bloodGroup':
-                  if (['A+', 'A-', 'B+', 'B-', 'O+', 'O-', 'AB+', 'AB-'].includes(value)) {
-                    extractedData.bloodGroup = value as any;
-                  }
-                  break;
-                case 'category':
-                  if (/^[A-Z]+$/.test(value)) {
-                    extractedData.category = value;
-                  }
-                  break;
-                case 'issuedBy':
-                  if (value.length >= 5) {
-                    extractedData.issuingAuthority = value.replace(/\s+/g, ' ').trim();
-                  }
-                  break;
-              }
-              
-              if (extractedData[field as keyof LicenseData]) {
-                console.log(`✓ ${field} found:`, value);
-                break; // Move to next field once found
-              }
-            }
-          }
-          pattern.lastIndex = 0; // Reset regex
+      let match;
+      pattern.lastIndex = 0;
+      while ((match = pattern.exec(cleanText)) !== null) {
+        const dateStr = match[1];
+        console.log(`Testing ${field} with date:`, dateStr);
+        const isoDate = convertNepalDateToISO(dateStr);
+        if (isoDate && isoDate !== dateStr && /^\d{4}-\d{2}-\d{2}$/.test(isoDate)) {
+          (extractedData as any)[field] = isoDate;
+          console.log(`✓ ${field} found:`, isoDate);
+          break;
         }
-        if (extractedData[field as keyof LicenseData]) break;
       }
+      if ((extractedData as any)[field]) break;
     }
+    if ((extractedData as any)[field]) continue;
   }
 
   // Stage 2: Line-by-line analysis for missed fields
@@ -233,6 +184,7 @@ export const performComprehensiveExtractionForNepal = async (
   Object.keys(lineBasedData).forEach(key => {
     if (!extractedData[key as keyof typeof extractedData] && lineBasedData[key as keyof typeof lineBasedData]) {
       (extractedData as any)[key] = lineBasedData[key as keyof typeof lineBasedData];
+      console.log(`✓ ${key} found from line analysis:`, lineBasedData[key as keyof typeof lineBasedData]);
     }
   });
 
@@ -248,6 +200,7 @@ export const performComprehensiveExtractionForNepal = async (
     Object.keys(positionBasedData).forEach(key => {
       if (!extractedData[key as keyof typeof extractedData] && positionBasedData[key as keyof typeof positionBasedData]) {
         (extractedData as any)[key] = positionBasedData[key as keyof typeof positionBasedData];
+        console.log(`✓ ${key} found from word positioning:`, positionBasedData[key as keyof typeof positionBasedData]);
       }
     });
   }

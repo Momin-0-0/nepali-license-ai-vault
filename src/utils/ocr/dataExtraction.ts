@@ -1,160 +1,197 @@
-
 import { LicenseData } from '@/types/license';
 import { NEPAL_LICENSE_PATTERNS } from './patterns';
 import { WordData, LineData } from './types';
 
 export const extractFromNepalLicenseLines = (lines: string[]): Partial<LicenseData> => {
   const data: Partial<LicenseData> = {};
-  const fullText = lines.join(' ');
+  const fullText = lines.join(' ').replace(/\s+/g, ' ');
   
-  for (let i = 0; i < lines.length; i++) {
-    const line = lines[i];
-    const nextLine = lines[i + 1] || '';
-    
-    // Enhanced license number detection - multiple formats
-    if (/D\.?L\.?\s*No/i.test(line) || /License.*No/i.test(line)) {
-      // Try different license number patterns
-      const patterns = [
-        /(\d{2}-\d{2,3}-\d{6,8})/,  // 03-06-01416052 or 03-066-123456
-        /(\d{11,12})/,              // Without dashes
-        /D\.?L\.?\s*No\.?\s*(\d{2}-?\d{2,3}-?\d{6,8})/i
-      ];
-      
-      for (const pattern of patterns) {
-        const numberMatch = line.match(pattern) || fullText.match(pattern);
-        if (numberMatch) {
-          data.licenseNumber = formatNepalLicenseNumber(numberMatch[1]);
-          console.log('✓ License number extracted:', data.licenseNumber);
+  console.log('Analyzing lines for extraction:', lines);
+  
+  // Enhanced license number detection with more specific patterns
+  const licensePatterns = [
+    /D\.?L\.?\s*No\.?\s*[:\-]?\s*(\d{2}-\d{2,3}-\d{6,8})/i,
+    /License\s*No\.?\s*[:\-]?\s*(\d{2}-\d{2,3}-\d{6,8})/i,
+    /(\d{2}-\d{2,3}-\d{6,8})(?!\d)/g, // Standalone license number format
+    /(\d{11,13})(?!\d)/g // Numeric only format
+  ];
+  
+  for (const pattern of licensePatterns) {
+    const match = fullText.match(pattern);
+    if (match) {
+      const licenseNum = match[1];
+      if (validateNepalLicenseNumber(licenseNum)) {
+        data.licenseNumber = formatNepalLicenseNumber(licenseNum);
+        console.log('✓ License number extracted:', data.licenseNumber);
+        break;
+      }
+    }
+  }
+  
+  // Enhanced name extraction - look for "Name:" pattern more precisely
+  const namePatterns = [
+    /Name\s*[:\-]\s*([A-Z][A-Za-z\s]{2,30})(?:\s+Address|$)/i,
+    /Name\s*[:\-]\s*([A-Z][A-Za-z\s]{2,30})\s*$/i,
+    /^([A-Z][A-Za-z]+\s+[A-Z][A-Za-z]+)(?:\s+Address|$)/m
+  ];
+  
+  for (const pattern of namePatterns) {
+    const match = fullText.match(pattern);
+    if (match && match[1]) {
+      const name = match[1].trim().replace(/\s+/g, ' ');
+      if (name.length >= 3 && name.length <= 50 && /^[A-Za-z\s]+$/.test(name)) {
+        data.holderName = name;
+        console.log('✓ Holder name extracted:', data.holderName);
+        break;
+      }
+    }
+  }
+  
+  // Enhanced date extraction - look for specific date patterns near keywords
+  const datePatterns = [
+    { field: 'issueDate', patterns: [
+      /D\.?O\.?I\.?\s*[:\-]?\s*(\d{1,2}[-\/]\d{1,2}[-\/]\d{4})/i,
+      /Issue.*Date\s*[:\-]?\s*(\d{1,2}[-\/]\d{1,2}[-\/]\d{4})/i,
+      /(\d{1,2}[-\/]\d{1,2}[-\/]\d{4})\s*(?:D\.?O\.?E|Expiry)/i, // Date before expiry
+    ]},
+    { field: 'expiryDate', patterns: [
+      /D\.?O\.?E\.?\s*[:\-]?\s*(\d{1,2}[-\/]\d{1,2}[-\/]\d{4})/i,
+      /Expiry.*Date\s*[:\-]?\s*(\d{1,2}[-\/]\d{1,2}[-\/]\d{4})/i,
+      /Valid.*Till\s*[:\-]?\s*(\d{1,2}[-\/]\d{1,2}[-\/]\d{4})/i,
+      /(\d{1,2}[-\/]\d{1,2}[-\/]\d{4})\s*(?:Phone|Category|$)/i, // Date before phone/category
+    ]},
+    { field: 'dateOfBirth', patterns: [
+      /D\.?O\.?B\.?\s*[:\-]?\s*(\d{1,2}[-\/]\d{1,2}[-\/]\d{4})/i,
+      /Birth.*Date\s*[:\-]?\s*(\d{1,2}[-\/]\d{1,2}[-\/]\d{4})/i,
+    ]}
+  ];
+  
+  for (const { field, patterns } of datePatterns) {
+    for (const pattern of patterns) {
+      const match = fullText.match(pattern);
+      if (match && match[1]) {
+        const dateStr = match[1];
+        const isoDate = convertNepalDateToISO(dateStr);
+        if (isoDate && isoDate !== dateStr) { // Valid conversion
+          (data as any)[field] = isoDate;
+          console.log(`✓ ${field} extracted:`, isoDate);
           break;
         }
       }
     }
-    
-    // Enhanced date extraction - look for D.O.I and D.O.E patterns
-    if (/D\.?O\.?I\.?[:\s]/.test(line) || /Issue.*Date/i.test(line)) {
-      const datePatterns = [
-        /(\d{2}-\d{2}-\d{4})/,  // DD-MM-YYYY
-        /(\d{4}-\d{2}-\d{2})/,  // YYYY-MM-DD
-        /(\d{1,2}\/\d{1,2}\/\d{4})/  // D/M/YYYY or DD/MM/YYYY
-      ];
-      
-      for (const pattern of datePatterns) {
-        const dateMatch = line.match(pattern);
-        if (dateMatch) {
-          data.issueDate = convertNepalDateToISO(dateMatch[1]);
-          console.log('✓ Issue date extracted:', data.issueDate);
-          break;
-        }
+    if ((data as any)[field]) break;
+  }
+  
+  // Enhanced Father/Husband name extraction
+  const fatherHusbandPatterns = [
+    /F\/H\s*Name\s*[:\-]?\s*([A-Z][A-Za-z\s]{2,30})(?:\s+Citizenship|$)/i,
+    /Father.*Name\s*[:\-]?\s*([A-Z][A-Za-z\s]{2,30})(?:\s+Citizenship|$)/i,
+    /Husband.*Name\s*[:\-]?\s*([A-Z][A-Za-z\s]{2,30})(?:\s+Citizenship|$)/i,
+  ];
+  
+  for (const pattern of fatherHusbandPatterns) {
+    const match = fullText.match(pattern);
+    if (match && match[1]) {
+      const name = match[1].trim().replace(/\s+/g, ' ');
+      if (name.length >= 3 && name.length <= 50 && /^[A-Za-z\s]+$/.test(name) && !name.includes('Citizenship')) {
+        data.fatherOrHusbandName = name;
+        console.log('✓ Father/Husband name extracted:', data.fatherOrHusbandName);
+        break;
       }
     }
-    
-    // Enhanced expiry date extraction
-    if (/D\.?O\.?E\.?[:\s]/.test(line) || /Expiry.*Date/i.test(line) || /Valid.*Till/i.test(line)) {
-      const datePatterns = [
-        /(\d{2}-\d{2}-\d{4})/,  // DD-MM-YYYY
-        /(\d{4}-\d{2}-\d{2})/,  // YYYY-MM-DD
-        /(\d{1,2}\/\d{1,2}\/\d{4})/  // D/M/YYYY or DD/MM/YYYY
-      ];
-      
-      for (const pattern of datePatterns) {
-        const dateMatch = line.match(pattern);
-        if (dateMatch) {
-          data.expiryDate = convertNepalDateToISO(dateMatch[1]);
-          console.log('✓ Expiry date extracted:', data.expiryDate);
-          break;
-        }
-      }
-    }
-    
-    // Name detection (holder name)
-    if (/^Name[:\s]/i.test(line)) {
-      const nameMatch = line.match(/Name[:\s]*([A-Z][a-zA-Z\s]{2,})/i);
-      if (nameMatch) {
-        data.holderName = nameMatch[1].trim();
-      }
-    }
-    
-    // Address detection
-    if (/^Address[:\s]/i.test(line)) {
-      let address = line.replace(/^Address[:\s]*/i, '').trim();
-      if (nextLine && !nextLine.match(/^(D\.O\.B|DOB|Phone|Category|Citizenship|Father|Husband)/i)) {
-        address += ', ' + nextLine.trim();
-      }
-      if (address.length > 5) {
+  }
+  
+  // Enhanced address extraction
+  const addressPatterns = [
+    /Address\s*[:\-]?\s*([A-Za-z0-9\-,\s]{5,50})(?:\s+(?:D\.O\.B|DOB|F\/H|Father|Husband))/i,
+    /Address\s*[:\-]?\s*([A-Za-z0-9\-,\s]{5,50})\s*$/i,
+  ];
+  
+  for (const pattern of addressPatterns) {
+    const match = fullText.match(pattern);
+    if (match && match[1]) {
+      const address = match[1].trim().replace(/\s+/g, ' ');
+      if (address.length >= 5) {
         data.address = address;
+        console.log('✓ Address extracted:', data.address);
+        break;
       }
     }
-    
-    // Date of birth
-    if (/D\.?O\.?B\.?[:\s]/.test(line)) {
-      const datePatterns = [
-        /(\d{2}-\d{2}-\d{4})/,  // DD-MM-YYYY
-        /(\d{4}-\d{2}-\d{2})/,  // YYYY-MM-DD
-        /(\d{1,2}\/\d{1,2}\/\d{4})/  // D/M/YYYY or DD/MM/YYYY
-      ];
-      
-      for (const pattern of datePatterns) {
-        const dobMatch = line.match(pattern);
-        if (dobMatch) {
-          data.dateOfBirth = convertNepalDateToISO(dobMatch[1]);
-          break;
-        }
+  }
+  
+  // Enhanced citizenship number extraction
+  const citizenshipPatterns = [
+    /Citizenship\s*No\.?\s*[:\-]?\s*(\d{2}-\d{2}-\d{2}-\d{5})/i,
+    /(\d{2}-\d{2}-\d{2}-\d{5})/g,
+    /Citizenship\s*No\.?\s*[:\-]?\s*(\d{10,15})/i,
+  ];
+  
+  for (const pattern of citizenshipPatterns) {
+    const match = fullText.match(pattern);
+    if (match && match[1]) {
+      const citizenship = match[1];
+      if (/^\d{2}-\d{2}-\d{2}-\d{5}$/.test(citizenship) || /^\d{10,15}$/.test(citizenship)) {
+        data.citizenshipNo = citizenship;
+        console.log('✓ Citizenship number extracted:', data.citizenshipNo);
+        break;
       }
     }
-    
-    // Father or Husband name
-    if (/F\/H\s*Name/i.test(line) || /Father.*Name/i.test(line) || /Husband.*Name/i.test(line)) {
-      const fatherMatch = line.match(/(?:F\/H|Father.*|Husband.*)\s*Name[:\s]*([A-Z][a-zA-Z\s]{2,})/i);
-      if (fatherMatch) {
-        data.fatherOrHusbandName = fatherMatch[1].trim();
+  }
+  
+  // Enhanced phone number extraction
+  const phonePatterns = [
+    /Phone\s*No\.?\s*[:\-]?\s*(\d{10})/i,
+    /Mobile\s*[:\-]?\s*(\d{10})/i,
+    /(98\d{8})/g,
+    /(\d{10})(?!\d)/g, // 10 digit standalone
+  ];
+  
+  for (const pattern of phonePatterns) {
+    const match = fullText.match(pattern);
+    if (match && match[1]) {
+      const phone = match[1];
+      if (/^\d{10}$/.test(phone)) {
+        data.phoneNo = phone;
+        console.log('✓ Phone number extracted:', data.phoneNo);
+        break;
       }
     }
-    
-    // Citizenship number
-    if (/Citizenship[:\s]*No/i.test(line)) {
-      const citizenshipMatch = line.match(/(\d{10,15})/);
-      if (citizenshipMatch) {
-        data.citizenshipNo = citizenshipMatch[1];
+  }
+  
+  // Enhanced blood group extraction
+  const bloodPatterns = [
+    /B\.?G\.?\s*[:\-]?\s*([ABO]{1,2}[+-])/i,
+    /Blood\s*Group\s*[:\-]?\s*([ABO]{1,2}[+-])/i,
+    /([ABO]{1,2}[+-])(?!\w)/g,
+  ];
+  
+  for (const pattern of bloodPatterns) {
+    const match = fullText.match(pattern);
+    if (match && match[1]) {
+      const bloodGroup = match[1].toUpperCase();
+      if (['A+', 'A-', 'B+', 'B-', 'O+', 'O-', 'AB+', 'AB-'].includes(bloodGroup)) {
+        data.bloodGroup = bloodGroup as any;
+        console.log('✓ Blood group extracted:', data.bloodGroup);
+        break;
       }
     }
-    
-    // Passport number
-    if (/Passport[:\s]*No/i.test(line)) {
-      const passportMatch = line.match(/([A-Z0-9]{8,15})/);
-      if (passportMatch) {
-        data.passportNo = passportMatch[1];
-      }
-    }
-    
-    // Phone number
-    if (/Phone[:\s]*No/i.test(line) || /Mobile/i.test(line) || /Contact/i.test(line)) {
-      const phoneMatch = line.match(/(\d{10})/);
-      if (phoneMatch) {
-        data.phoneNo = phoneMatch[1];
-      }
-    }
-    
-    // Blood group
-    if (/B\.?G\.?[:\s]/i.test(line) || /Blood\s*Group/i.test(line)) {
-      const bloodMatch = line.match(/([ABO]{1,2}[+-])/);
-      if (bloodMatch && ['A+', 'A-', 'B+', 'B-', 'O+', 'O-', 'AB+', 'AB-'].includes(bloodMatch[1])) {
-        data.bloodGroup = bloodMatch[1] as any;
-      }
-    }
-    
-    // Category
-    if (/Category[:\s]/i.test(line) || /Class[:\s]/i.test(line)) {
-      const categoryMatch = line.match(/(?:Category|Class)[:\s]*([A-Z]+)/i);
-      if (categoryMatch) {
-        data.category = categoryMatch[1];
-      }
-    }
-    
-    // Issued by / Issuing authority
-    if (/Issued\s*By/i.test(line) || /Issuing.*Authority/i.test(line)) {
-      const issuedByMatch = line.match(/(?:Issued\s*By|Issuing.*Authority)[:\s]*([A-Za-z\s,]{5,})/i);
-      if (issuedByMatch) {
-        data.issuingAuthority = issuedByMatch[1].trim();
+  }
+  
+  // Enhanced category extraction
+  const categoryPatterns = [
+    /Category\s*[:\-]?\s*([A-Z]+)/i,
+    /Class\s*[:\-]?\s*([A-Z]+)/i,
+    /([A-Z])\s*(?:Category|Class)/i,
+  ];
+  
+  for (const pattern of categoryPatterns) {
+    const match = fullText.match(pattern);
+    if (match && match[1]) {
+      const category = match[1].toUpperCase();
+      if (/^[A-Z]{1,3}$/.test(category)) {
+        data.category = category;
+        console.log('✓ Category extracted:', data.category);
+        break;
       }
     }
   }
@@ -241,6 +278,8 @@ export const formatNepalLicenseNumber = (licenseNumber: string): string => {
 };
 
 export const convertNepalDateToISO = (dateString: string): string => {
+  console.log('Converting date:', dateString);
+  
   // Handle various Nepal date formats
   const isoMatch = dateString.match(/(\d{4})-(\d{2})-(\d{2})/);
   if (isoMatch) {
@@ -251,16 +290,21 @@ export const convertNepalDateToISO = (dateString: string): string => {
   const ddmmMatch = dateString.match(/(\d{1,2})-(\d{1,2})-(\d{4})/);
   if (ddmmMatch) {
     const [, day, month, year] = ddmmMatch;
-    return `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+    const isoDate = `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+    console.log('Converted DD-MM-YYYY to ISO:', isoDate);
+    return isoDate;
   }
   
   // Handle DD/MM/YYYY format
   const slashMatch = dateString.match(/(\d{1,2})\/(\d{1,2})\/(\d{4})/);
   if (slashMatch) {
     const [, day, month, year] = slashMatch;
-    return `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+    const isoDate = `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+    console.log('Converted DD/MM/YYYY to ISO:', isoDate);
+    return isoDate;
   }
   
+  console.log('Could not convert date format:', dateString);
   return dateString;
 };
 
