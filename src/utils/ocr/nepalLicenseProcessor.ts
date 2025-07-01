@@ -1,4 +1,5 @@
 
+
 import { createWorker, PSM } from 'tesseract.js';
 import { LicenseData } from '@/types/license';
 import { NEPAL_LICENSE_PATTERNS } from './patterns';
@@ -31,7 +32,7 @@ export const processImageWithOCR = async (
     // Configure for Nepal license text recognition
     await worker.setParameters({
       tessedit_char_whitelist: 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-+:., /',
-      tessedit_pageseg_mode: PSM.SINGLE_UNIFORM_BLOCK,
+      tessedit_pageseg_mode: PSM.SINGLE_BLOCK,
       preserve_interword_spaces: '1'
     });
     
@@ -185,3 +186,4 @@ export const performAdvancedExtractionForNepal = async (
   // Stage 5: Final validation and cleanup
   return validateAndCleanupNepalData(extractedData);
 };
+
