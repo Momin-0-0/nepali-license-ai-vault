@@ -8,6 +8,7 @@ import { useOfflineSync } from "@/hooks/useOfflineSync";
 import { useLocalStorage } from "@/hooks/useLocalStorage";
 import { processImageWithOCR } from "@/utils/ocrUtils";
 import { validateLicenseData } from "@/utils/dataValidation";
+import { LicenseData } from "@/types/license";
 import LicenseForm from "@/components/LicenseForm";
 import AppHeader from "@/components/AppHeader";
 import EnhancedImageUpload from "@/components/EnhancedImageUpload";
@@ -15,7 +16,7 @@ import LicenseFormSkeleton from "@/components/LicenseFormSkeleton";
 
 const Upload = () => {
   const [user] = useLocalStorage('user', null, true);
-  const [licenseData, setLicenseData] = useState({
+  const [licenseData, setLicenseData] = useState<LicenseData>({
     licenseNumber: '',
     holderName: '',
     issueDate: '',
@@ -27,7 +28,7 @@ const Upload = () => {
     citizenshipNo: '',
     passportNo: '',
     phoneNo: '',
-    bloodGroup: '',
+    bloodGroup: undefined,
     category: ''
   });
   const [uploadedImage, setUploadedImage] = useState('');
@@ -49,38 +50,45 @@ const Upload = () => {
   }, [user, navigate]);
 
   const handleImageUpload = async (file: File) => {
-    console.log('Comprehensive Nepal license image uploaded:', file);
+    console.log('Nepal license image uploaded (XX-XXX-XXXXXX format):', file);
     setCurrentStep(2);
     setIsProcessing(true);
-    setProgressText('Initializing comprehensive AI OCR for Nepal license format...');
+    setProgressText('Initializing AI OCR for Nepal license XX-XXX-XXXXXX format...');
 
     try {
-      // Process image with enhanced comprehensive OCR
+      // Process image with enhanced OCR
       const extractedData = await processImageWithOCR(file, (progress) => {
         setProgressText(progress);
       });
 
       if (extractedData && Object.keys(extractedData).length > 0) {
-        // Merge extracted data with existing data
-        const mergedData = { ...licenseData, ...extractedData };
+        // Merge extracted data with existing data, ensuring proper types
+        const mergedData: LicenseData = { 
+          ...licenseData, 
+          ...extractedData,
+          // Ensure bloodGroup is properly typed
+          bloodGroup: extractedData.bloodGroup && ['A+', 'A-', 'B+', 'B-', 'O+', 'O-', 'AB+', 'AB-'].includes(extractedData.bloodGroup as string) 
+            ? extractedData.bloodGroup as LicenseData['bloodGroup']
+            : undefined
+        };
         setLicenseData(mergedData);
         
         // Track which fields were extracted
         const extractionStatus: {[key: string]: boolean} = {};
         const fieldLabels: {[key: string]: string} = {
-          licenseNumber: 'License Number',
-          holderName: 'Holder Name',
-          address: 'Address',
+          licenseNumber: 'License Number (XX-XXX-XXXXXX)',
+          holderName: 'Name',
+          address: 'Address', 
           dateOfBirth: 'Date of Birth',
           fatherOrHusbandName: 'Father/Husband Name',
           citizenshipNo: 'Citizenship Number',
           passportNo: 'Passport Number',
-          phoneNo: 'Phone Number',
+          phoneNo: 'Phone Number (10 digits)',
           bloodGroup: 'Blood Group',
-          issueDate: 'Issue Date',
-          expiryDate: 'Expiry Date',
+          issueDate: 'Date of Issue',
+          expiryDate: 'Date of Expiry',
           category: 'Category',
-          issuingAuthority: 'Issuing Authority'
+          issuingAuthority: 'Issued By'
         };
         
         Object.keys(fieldLabels).forEach(key => {
@@ -96,29 +104,29 @@ const Upload = () => {
         const accuracy = Math.round((fieldsExtracted / Object.keys(fieldLabels).length) * 100);
         
         toast({
-          title: "🎉 Comprehensive Smart Extraction Complete!",
-          description: `Advanced AI extracted ${fieldsExtracted}/${Object.keys(fieldLabels).length} fields from your Nepal license. Accuracy: ${accuracy}%`,
+          title: "🎉 Nepal License Format Extraction Complete!",
+          description: `AI extracted ${fieldsExtracted}/${Object.keys(fieldLabels).length} fields in XX-XXX-XXXXXX format. Accuracy: ${accuracy}%`,
         });
         
-        console.log('✓ Comprehensive Nepal license auto-fill completed:', fieldsExtracted, 'fields extracted');
+        console.log('✓ Nepal license auto-fill completed:', fieldsExtracted, 'fields extracted');
         console.log('Extraction details:', extractionStatus);
       } else {
         toast({
           title: "Partial Extraction",
-          description: "Some fields detected but need manual verification. Please review the form below.",
+          description: "Some fields detected but need manual verification for Nepal format. Please review the form below.",
           variant: "destructive",
         });
       }
     } catch (error: any) {
-      console.error("Comprehensive Nepal OCR Error:", error);
+      console.error("Nepal License OCR Error:", error);
       toast({
-        title: "Smart Extraction Failed",
-        description: "Advanced comprehensive OCR encountered issues. Please ensure good lighting and try again.",
+        title: "Nepal License Extraction Failed", 
+        description: "OCR encountered issues with Nepal XX-XXX-XXXXXX format. Please ensure good lighting and try again.",
         variant: "destructive",
       });
     } finally {
       setIsProcessing(false);
-      setProgressText('Comprehensive smart extraction complete - Ready for verification');
+      setProgressText('Nepal license extraction complete - Ready for verification');
     }
   };
 
@@ -126,14 +134,14 @@ const Upload = () => {
     if (!uploadedImage) {
       toast({
         title: "No Image",
-        description: "Please upload a license image first.",
+        description: "Please upload a Nepal license image first.",
         variant: "destructive",
       });
       return;
     }
 
     setIsProcessing(true);
-    setProgressText('Starting comprehensive OCR...');
+    setProgressText('Starting Nepal license OCR...');
     setCurrentStep(2);
 
     try {
@@ -143,11 +151,18 @@ const Upload = () => {
       });
 
       if (extractedData) {
-        setLicenseData(extractedData as any);
+        const mergedData: LicenseData = { 
+          ...licenseData, 
+          ...extractedData,
+          bloodGroup: extractedData.bloodGroup && ['A+', 'A-', 'B+', 'B-', 'O+', 'O-', 'AB+', 'AB-'].includes(extractedData.bloodGroup as string) 
+            ? extractedData.bloodGroup as LicenseData['bloodGroup']
+            : undefined
+        };
+        setLicenseData(mergedData);
       } else {
         toast({
           title: "OCR Failed",
-          description: "Could not extract data from the image. Please try again or enter manually.",
+          description: "Could not extract Nepal license data. Please try again or enter manually.",
           variant: "destructive",
         });
       }
@@ -155,17 +170,17 @@ const Upload = () => {
       console.error("OCR Error:", error);
       toast({
         title: "OCR Error",
-        description: error.message || "Failed to process image. Please try again.",
+        description: error.message || "Failed to process Nepal license image. Please try again.",
         variant: "destructive",
       });
     } finally {
       setIsProcessing(false);
     }
-  }, [uploadedImage, toast]);
+  }, [uploadedImage, toast, licenseData]);
 
   const handleSubmit = async () => {
     setIsSubmitting(true);
-    setProgressText('Submitting comprehensive license data...');
+    setProgressText('Submitting Nepal license data...');
 
     try {
       validateLicenseData(licenseData);
@@ -180,15 +195,15 @@ const Upload = () => {
       localStorage.setItem('licenses', JSON.stringify(licenses));
 
       toast({
-        title: "License Saved Successfully",
-        description: "Your comprehensive Nepal license data has been securely saved.",
+        title: "Nepal License Saved Successfully",
+        description: "Your Nepal driving license data (XX-XXX-XXXXXX format) has been securely saved.",
       });
       setCurrentStep(3);
     } catch (error: any) {
       console.error("Validation Error:", error);
       toast({
         title: "Validation Error",
-        description: error.message || "Please check the form data.",
+        description: error.message || "Please check the Nepal license form data.",
         variant: "destructive",
       });
     } finally {
@@ -203,7 +218,7 @@ const Upload = () => {
 
       <div className="container mx-auto px-4 py-8">
         <div className="max-w-4xl mx-auto">
-          {/* Enhanced Header for Comprehensive License Format */}
+          {/* Enhanced Header for Nepal License Format XX-XXX-XXXXXX */}
           <div className="text-center mb-8">
             <div className="flex items-center justify-center gap-3 mb-4">
               <div className="relative">
@@ -214,13 +229,13 @@ const Upload = () => {
               <Zap className="w-8 h-8 text-yellow-500" />
             </div>
             <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-600 via-green-600 to-orange-600 bg-clip-text text-transparent mb-4">
-              Comprehensive Nepal License Scanner
+              Nepal License Scanner (XX-XXX-XXXXXX)
             </h1>
             <p className="text-xl text-gray-700 mb-2">
-              Advanced AI-powered extraction for complete Nepal license data including personal details
+              Advanced AI extraction for Nepal driving license format: XX-XXX-XXXXXX
             </p>
             <p className="text-gray-600 max-w-2xl mx-auto">
-              Our enhanced OCR algorithm extracts 13+ fields from modern Nepal driving licenses including personal information, dates, and official details
+              Our enhanced OCR algorithm extracts all fields from modern Nepal driving licenses including personal information, dates, and official details
             </p>
           </div>
 
@@ -283,13 +298,13 @@ const Upload = () => {
             {/* Enhanced Step Labels */}
             <div className="text-center space-y-2">
               <h2 className="text-2xl font-semibold text-gray-800">
-                {currentStep === 1 && "Step 1: Upload Nepal License"}
-                {currentStep === 2 && "Step 2: AI Comprehensive Verification"}
+                {currentStep === 1 && "Step 1: Upload Nepal License (XX-XXX-XXXXXX)"}
+                {currentStep === 2 && "Step 2: AI Nepal Format Verification"}
                 {currentStep === 3 && "Step 3: Secure Storage Complete"}
               </h2>
               <p className="text-gray-600">
-                {currentStep === 1 && "Upload your Nepal license for comprehensive AI data extraction"}
-                {currentStep === 2 && `Verify ${extractedFieldsCount}/13+ AI-extracted fields with advanced accuracy`}
+                {currentStep === 1 && "Upload your Nepal license for AI data extraction (XX-XXX-XXXXXX format)"}
+                {currentStep === 2 && `Verify ${extractedFieldsCount}/13+ AI-extracted fields with Nepal format accuracy`}
                 {currentStep === 3 && "Your complete Nepal license data has been securely processed and stored"}
               </p>
             </div>
@@ -316,7 +331,7 @@ const Upload = () => {
                     </div>
                     <div className="text-center">
                       <p className="text-lg font-medium text-blue-800">{progressText}</p>
-                      <p className="text-sm text-blue-600 mt-1">Advanced AI analyzing comprehensive Nepal license format...</p>
+                      <p className="text-sm text-blue-600 mt-1">Advanced AI analyzing Nepal license XX-XXX-XXXXXX format...</p>
                     </div>
                   </div>
                   <div className="mt-4">
@@ -342,23 +357,23 @@ const Upload = () => {
                     {/* Extraction Summary */}
                     <Card className="border-green-200 bg-green-50/30">
                       <CardContent className="p-6">
-                        <h3 className="text-lg font-semibold text-green-800 mb-4">Extraction Summary</h3>
+                        <h3 className="text-lg font-semibold text-green-800 mb-4">Nepal License Extraction Summary (XX-XXX-XXXXXX)</h3>
                         <div className="grid grid-cols-2 md:grid-cols-3 gap-3 text-sm">
                           {Object.entries(extractionDetails).map(([field, extracted]) => {
                             const labels: {[key: string]: string} = {
-                              licenseNumber: 'License Number',
-                              holderName: 'Holder Name',
+                              licenseNumber: 'License No. (XX-XXX-XXXXXX)',
+                              holderName: 'Name',
                               address: 'Address',
                               dateOfBirth: 'Date of Birth',
                               fatherOrHusbandName: 'Father/Husband',
                               citizenshipNo: 'Citizenship No.',
                               passportNo: 'Passport No.',
-                              phoneNo: 'Phone Number',
+                              phoneNo: 'Phone (10 digits)',
                               bloodGroup: 'Blood Group',
-                              issueDate: 'Issue Date',
-                              expiryDate: 'Expiry Date',
+                              issueDate: 'Date of Issue',
+                              expiryDate: 'Date of Expiry',
                               category: 'Category',
-                              issuingAuthority: 'Issuing Authority'
+                              issuingAuthority: 'Issued By'
                             };
                             return (
                               <div key={field} className={`flex items-center gap-2 p-2 rounded ${
@@ -396,9 +411,9 @@ const Upload = () => {
                   <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
                     <CheckCircle className="w-10 h-10 text-green-600" />
                   </div>
-                  <h3 className="text-3xl font-bold text-green-800 mb-2">Comprehensive Processing Complete! 🎉</h3>
+                  <h3 className="text-3xl font-bold text-green-800 mb-2">Nepal License Processing Complete! 🎉</h3>
                   <p className="text-green-700 mb-4">
-                    Your complete Nepal driving license data has been successfully processed with advanced AI technology.
+                    Your Nepal driving license data (XX-XXX-XXXXXX format) has been successfully processed with advanced AI technology.
                   </p>
                   <div className="bg-white rounded-xl p-6 mb-6 border border-green-200">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
@@ -412,11 +427,11 @@ const Upload = () => {
                       </div>
                       <div className="flex items-center gap-2">
                         <Shield className="w-4 h-4 text-green-500" />
-                        <span><strong>Security:</strong> Enterprise Grade</span>
+                        <span><strong>Format:</strong> XX-XXX-XXXXXX</span>
                       </div>
                       <div className="flex items-center gap-2">
                         <User className="w-4 h-4 text-purple-500" />
-                        <span><strong>Data Type:</strong> Comprehensive</span>
+                        <span><strong>Type:</strong> Nepal License</span>
                       </div>
                     </div>
                   </div>
@@ -443,7 +458,7 @@ const Upload = () => {
                           citizenshipNo: '',
                           passportNo: '',
                           phoneNo: '',
-                          bloodGroup: '',
+                          bloodGroup: undefined,
                           category: ''
                         });
                       }}
@@ -464,7 +479,7 @@ const Upload = () => {
                   disabled={isProcessing || !uploadedImage}
                   className="bg-gradient-to-r from-blue-600 to-green-600 hover:from-blue-700 hover:to-green-700 px-8 py-3 text-lg font-semibold"
                 >
-                  {currentStep === 1 ? 'Extract Comprehensive License Data' : 'Process Complete License'}
+                  {currentStep === 1 ? 'Extract Nepal License Data (XX-XXX-XXXXXX)' : 'Process Nepal License'}
                 </Button>
               </div>
             )}

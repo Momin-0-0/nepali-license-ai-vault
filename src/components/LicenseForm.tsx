@@ -5,7 +5,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { FileText, AlertCircle, Loader2, CheckCircle, XCircle, Info, RefreshCw, Eye, EyeOff } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { FileText, AlertCircle, Loader2, CheckCircle, XCircle, Info, RefreshCw, Eye } from "lucide-react";
 import { LicenseData } from '@/types/license';
 import { validateNepalLicenseNumber, validateDate, validateExpiryDate, sanitizeInput } from '@/utils/validation';
 
@@ -40,7 +41,7 @@ const LicenseForm = ({
     
     Object.keys(licenseData).forEach(field => {
       const value = licenseData[field as keyof LicenseData];
-      if (value && value.trim() !== '') {
+      if (value && value.toString().trim() !== '') {
         autoFilled[field] = true;
         newVerificationStatus[field] = 'pending';
         console.log(`Auto-filled field detected: ${field} = ${value}`);
@@ -54,11 +55,11 @@ const LicenseForm = ({
     console.log(`Total auto-filled fields: ${autoFilledCount}`);
   }, [licenseData]);
 
-  const updateField = (field: keyof LicenseData, value: string) => {
-    const sanitizedValue = sanitizeInput(value);
+  const updateField = (field: keyof LicenseData, value: string | undefined) => {
+    const sanitizedValue = value ? sanitizeInput(value) : '';
     onDataChange({
       ...licenseData,
-      [field]: sanitizedValue
+      [field]: field === 'bloodGroup' ? (value as LicenseData['bloodGroup']) : sanitizedValue
     });
     
     // Mark as corrected if it was auto-filled
@@ -77,32 +78,38 @@ const LicenseForm = ({
     setTouched(prev => ({ ...prev, [field]: true }));
   };
 
-  const validateField = (field: keyof LicenseData, value: string) => {
+  const validateField = (field: keyof LicenseData, value: string | undefined) => {
     let fieldErrors: string[] = [];
 
     switch (field) {
       case 'licenseNumber':
-        const licenseValidation = validateNepalLicenseNumber(value);
-        if (!licenseValidation.isValid) {
-          fieldErrors = licenseValidation.errors;
+        if (value) {
+          const licenseValidation = validateNepalLicenseNumber(value);
+          if (!licenseValidation.isValid) {
+            fieldErrors = licenseValidation.errors;
+          }
         }
         break;
       
       case 'issueDate':
-        const issueDateValidation = validateDate(value, 'Issue date');
-        if (!issueDateValidation.isValid) {
-          fieldErrors = issueDateValidation.errors;
+        if (value) {
+          const issueDateValidation = validateDate(value, 'Issue date');
+          if (!issueDateValidation.isValid) {
+            fieldErrors = issueDateValidation.errors;
+          }
         }
         break;
       
       case 'expiryDate':
-        const expiryDateValidation = validateDate(value, 'Expiry date');
-        if (!expiryDateValidation.isValid) {
-          fieldErrors = expiryDateValidation.errors;
-        } else if (licenseData.issueDate) {
-          const dateRangeValidation = validateExpiryDate(licenseData.issueDate, value);
-          if (!dateRangeValidation.isValid) {
-            fieldErrors = [...fieldErrors, ...dateRangeValidation.errors];
+        if (value) {
+          const expiryDateValidation = validateDate(value, 'Expiry date');
+          if (!expiryDateValidation.isValid) {
+            fieldErrors = expiryDateValidation.errors;
+          } else if (licenseData.issueDate) {
+            const dateRangeValidation = validateExpiryDate(licenseData.issueDate, value);
+            if (!dateRangeValidation.isValid) {
+              fieldErrors = [...fieldErrors, ...dateRangeValidation.errors];
+            }
           }
         }
         break;
@@ -113,6 +120,18 @@ const LicenseForm = ({
         }
         if (value && !/^[a-zA-Z\s.'-]+$/.test(value)) {
           fieldErrors.push('Name can only contain letters, spaces, dots, hyphens, and apostrophes');
+        }
+        break;
+      
+      case 'phoneNo':
+        if (value && !/^\d{10}$/.test(value)) {
+          fieldErrors.push('Phone number must be exactly 10 digits');
+        }
+        break;
+      
+      case 'citizenshipNo':
+        if (value && value.length < 10) {
+          fieldErrors.push('Citizenship number must be at least 10 digits');
         }
         break;
       
@@ -129,18 +148,20 @@ const LicenseForm = ({
 
   const handleBlur = (field: keyof LicenseData) => {
     setTouched(prev => ({ ...prev, [field]: true }));
-    validateField(field, licenseData[field]);
+    const value = licenseData[field];
+    validateField(field, typeof value === 'string' ? value : value?.toString());
   };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
-    // Validate all fields
-    const allFields: (keyof LicenseData)[] = ['licenseNumber', 'expiryDate', 'issueDate', 'holderName', 'issuingAuthority', 'address'];
+    // Validate required fields
+    const requiredFields: (keyof LicenseData)[] = ['licenseNumber', 'holderName', 'address', 'issueDate', 'expiryDate'];
     let hasErrors = false;
     
-    allFields.forEach(field => {
-      const isValid = validateField(field, licenseData[field]);
+    requiredFields.forEach(field => {
+      const value = licenseData[field];
+      const isValid = validateField(field, typeof value === 'string' ? value : value?.toString());
       if (!isValid) hasErrors = true;
       setTouched(prev => ({ ...prev, [field]: true }));
     });
@@ -174,19 +195,19 @@ const LicenseForm = ({
     placeholder: string,
     required: boolean = false,
     type: string = "text",
-    isTextarea: boolean = false
+    isTextarea: boolean = false,
+    isSelect: boolean = false,
+    selectOptions?: string[]
   ) => {
     const isAutoFilled = autoFilledFields[field];
     const status = verificationStatus[field];
     const fieldError = errors[field];
     const fieldValue = licenseData[field] || '';
     
-    console.log(`Rendering field ${field}:`, { isAutoFilled, status, fieldValue });
-    
     return (
       <div className="space-y-2">
         <Label htmlFor={field} className="flex items-center gap-2">
-          {label} {required && '*'}
+          {label} {required && <span className="text-red-500">*</span>}
           {renderFieldIcon(field)}
           {isAutoFilled && (
             <div className="flex items-center gap-1">
@@ -213,10 +234,29 @@ const LicenseForm = ({
         </Label>
         
         <div className="relative">
-          {isTextarea ? (
+          {isSelect ? (
+            <Select 
+              value={fieldValue.toString()} 
+              onValueChange={(value) => updateField(field, value)}
+              disabled={disabled}
+            >
+              <SelectTrigger className={`${fieldError?.length > 0 ? 'border-red-500' : ''} ${
+                isAutoFilled && status === 'pending' ? 'border-yellow-400 bg-yellow-50' : ''
+              }`}>
+                <SelectValue placeholder={placeholder} />
+              </SelectTrigger>
+              <SelectContent>
+                {selectOptions?.map((option) => (
+                  <SelectItem key={option} value={option}>
+                    {option}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          ) : isTextarea ? (
             <Textarea
               id={field}
-              value={fieldValue}
+              value={fieldValue.toString()}
               onChange={(e) => updateField(field, e.target.value)}
               onBlur={() => handleBlur(field)}
               placeholder={placeholder}
@@ -230,7 +270,7 @@ const LicenseForm = ({
             <Input
               id={field}
               type={type}
-              value={fieldValue}
+              value={fieldValue.toString()}
               onChange={(e) => updateField(field, field === 'licenseNumber' ? e.target.value.toUpperCase() : e.target.value)}
               onBlur={() => handleBlur(field)}
               placeholder={placeholder}
@@ -269,12 +309,12 @@ const LicenseForm = ({
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <FileText className="w-5 h-5" />
-          Nepal License Details {autoFilledCount > 0 ? `- ${autoFilledCount} Fields Auto-Filled` : ''}
+          Nepal License Details (XX-XXX-XXXXXX) {autoFilledCount > 0 ? `- ${autoFilledCount} Fields Auto-Filled` : ''}
         </CardTitle>
         <CardDescription>
           {autoFilledCount > 0 
             ? `OCR has automatically extracted ${autoFilledCount} field(s) from your Nepal driving license. Please verify each field is correct.`
-            : 'Please enter your Nepal driving license details manually.'
+            : 'Please enter your Nepal driving license details manually in XX-XXX-XXXXXX format.'
           }
         </CardDescription>
       </CardHeader>
@@ -338,48 +378,108 @@ const LicenseForm = ({
         <form onSubmit={handleSubmit} className="space-y-4">
           {renderFieldWithVerification(
             'licenseNumber',
-            'License Number (Nepal Format)',
-            'e.g., 03-06-041605052',
+            'License Number (Nepal Format: XX-XXX-XXXXXX)',
+            'e.g., 03-066-041605',
             true
           )}
 
           {renderFieldWithVerification(
             'holderName',
-            'Holder Name (As on License)',
-            'Full name as printed on Nepal license'
+            'Name (As on License)',
+            'Full name as printed on Nepal license',
+            true
           )}
 
           <div className="grid grid-cols-2 gap-4">
             {renderFieldWithVerification(
-              'issueDate',
-              'Issue Date (Nepal Format)',
-              'Date when license was issued',
+              'dateOfBirth',
+              'Date of Birth',
+              'YYYY-MM-DD',
               false,
               'date'
             )}
             {renderFieldWithVerification(
-              'expiryDate',
-              'Expiry Date (Nepal Format)',
-              'License expiration date',
-              true,
-              'date'
+              'fatherOrHusbandName',
+              'Father/Husband Name',
+              'As printed on license',
+              false
             )}
           </div>
-
-          {renderFieldWithVerification(
-            'issuingAuthority',
-            'Issuing Authority (Nepal)',
-            'Department of Transport Management, Government of Nepal'
-          )}
 
           {renderFieldWithVerification(
             'address',
             'Address (As on License)',
             'Address as printed on Nepal license',
-            false,
+            true,
             'text',
             true
           )}
+
+          <div className="grid grid-cols-2 gap-4">
+            {renderFieldWithVerification(
+              'citizenshipNo',
+              'Citizenship Number',
+              'Nepal citizenship number',
+              false
+            )}
+            {renderFieldWithVerification(
+              'passportNo',
+              'Passport Number',
+              'Passport number (if any)',
+              false
+            )}
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            {renderFieldWithVerification(
+              'phoneNo',
+              'Phone Number',
+              '10-digit phone number',
+              false
+            )}
+            {renderFieldWithVerification(
+              'bloodGroup',
+              'Blood Group',
+              'Select blood group',
+              false,
+              'text',
+              false,
+              true,
+              ['A+', 'A-', 'B+', 'B-', 'O+', 'O-', 'AB+', 'AB-']
+            )}
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            {renderFieldWithVerification(
+              'issueDate',
+              'Date of Issue',
+              'YYYY-MM-DD',
+              true,
+              'date'
+            )}
+            {renderFieldWithVerification(
+              'expiryDate',
+              'Date of Expiry',
+              'YYYY-MM-DD',
+              true,
+              'date'
+            )}
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            {renderFieldWithVerification(
+              'category',
+              'License Category',
+              'e.g., A, B, C',
+              false
+            )}
+            {renderFieldWithVerification(
+              'issuingAuthority',
+              'Issued By',
+              'Department of Transport Management, Government of Nepal',
+              false
+            )}
+          </div>
 
           {autoFilledCount === 0 && (
             <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
@@ -387,7 +487,7 @@ const LicenseForm = ({
                 <AlertCircle className="w-5 h-5 text-yellow-600 mt-0.5" />
                 <div className="text-sm text-yellow-700">
                   <p className="font-medium">No auto-fill data detected</p>
-                  <p>Please enter your Nepal license details manually. Make sure to upload a clear image for better OCR results.</p>
+                  <p>Please enter your Nepal license details manually in XX-XXX-XXXXXX format. Make sure to upload a clear image for better OCR results.</p>
                 </div>
               </div>
             </div>
@@ -403,7 +503,7 @@ const LicenseForm = ({
               disabled={disabled || isProcessing}
             >
               {isProcessing && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-              {isProcessing ? 'Saving Nepal License...' : 'Save Nepal License'}
+              {isProcessing ? 'Saving Nepal License...' : 'Save Nepal License (XX-XXX-XXXXXX)'}
             </Button>
           </div>
         </form>
