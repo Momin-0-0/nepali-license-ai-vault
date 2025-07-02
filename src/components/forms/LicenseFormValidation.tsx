@@ -1,6 +1,8 @@
+
 import { useState, useEffect } from 'react';
 import { LicenseData } from '@/types/license';
-import { validateNepalLicenseNumber, validateDate, validateExpiryDate, sanitizeInput } from '@/utils/validation';
+import { validateNepalLicenseNumber, validateNepalDate, validateExpiryDate } from '@/utils/validation/nepalLicenseValidator';
+import { sanitizeInput } from '@/utils/validation';
 
 export interface ValidationState {
   errors: Record<string, string[]>;
@@ -15,14 +17,13 @@ export const useLicenseFormValidation = (licenseData: LicenseData) => {
   const [autoFilledFields, setAutoFilledFields] = useState<Record<string, boolean>>({});
   const [verificationStatus, setVerificationStatus] = useState<Record<string, 'pending' | 'verified' | 'corrected'>>({});
 
-  // Helper function to safely get field value as string
   const getFieldValue = (field: keyof LicenseData): string => {
     const value = licenseData[field];
     if (value === undefined || value === null) return '';
     return String(value);
   };
 
-  // Track auto-filled fields when licenseData changes
+  // Track auto-filled fields with improved detection
   useEffect(() => {
     console.log('LicenseForm: License data updated:', licenseData);
     const autoFilled: Record<string, boolean> = {};
@@ -30,15 +31,19 @@ export const useLicenseFormValidation = (licenseData: LicenseData) => {
     
     Object.keys(licenseData).forEach(field => {
       const value = licenseData[field as keyof LicenseData];
-      if (value && value.toString().trim() !== '') {
+      // Improved detection: check for meaningful data, not just empty strings
+      if (value && typeof value === 'string' && value.trim() !== '' && value.length > 1) {
         autoFilled[field] = true;
-        // Keep existing verification status if field was already verified
         if (verificationStatus[field] !== 'verified') {
           newVerificationStatus[field] = 'pending';
         } else {
           newVerificationStatus[field] = 'verified';
         }
         console.log(`Auto-filled field detected: ${field} = ${value}`);
+      } else if (value && typeof value === 'object' && value !== null) {
+        // Handle complex objects like bloodGroup
+        autoFilled[field] = true;
+        newVerificationStatus[field] = verificationStatus[field] || 'pending';
       }
     });
     
@@ -49,60 +54,92 @@ export const useLicenseFormValidation = (licenseData: LicenseData) => {
     console.log(`Total auto-filled fields: ${autoFilledCount}`);
   }, [licenseData]);
 
-  const validateField = (field: keyof LicenseData, value: string | undefined) => {
+  const validateField = (field: keyof LicenseData, value: string | undefined): boolean => {
     let fieldErrors: string[] = [];
+    let warnings: string[] = [];
 
     switch (field) {
       case 'licenseNumber':
         if (value) {
-          const licenseValidation = validateNepalLicenseNumber(value);
-          if (!licenseValidation.isValid) {
-            fieldErrors = licenseValidation.errors;
+          const result = validateNepalLicenseNumber(value);
+          fieldErrors = result.errors;
+          if (result.warnings.length > 0) {
+            console.warn(`License number warnings:`, result.warnings);
           }
         }
         break;
       
       case 'issueDate':
         if (value) {
-          const issueDateValidation = validateDate(value, 'Issue date');
-          if (!issueDateValidation.isValid) {
-            fieldErrors = issueDateValidation.errors;
-          }
+          const result = validateNepalDate(value, 'Issue date');
+          fieldErrors = result.errors;
+          warnings = result.warnings;
         }
         break;
       
       case 'expiryDate':
         if (value) {
-          const expiryDateValidation = validateDate(value, 'Expiry date');
-          if (!expiryDateValidation.isValid) {
-            fieldErrors = expiryDateValidation.errors;
-          } else if (licenseData.issueDate) {
-            const dateRangeValidation = validateExpiryDate(licenseData.issueDate, value);
-            if (!dateRangeValidation.isValid) {
-              fieldErrors = [...fieldErrors, ...dateRangeValidation.errors];
-            }
+          const dateResult = validateNepalDate(value, 'Expiry date');
+          fieldErrors = dateResult.errors;
+          
+          if (dateResult.isValid && licenseData.issueDate) {
+            const rangeResult = validateExpiryDate(licenseData.issueDate, value);
+            fieldErrors = [...fieldErrors, ...rangeResult.errors];
+            warnings = [...warnings, ...rangeResult.warnings];
           }
         }
         break;
       
-      case 'holderName':
-        if (value && value.length < 2) {
-          fieldErrors.push('Name must be at least 2 characters');
+      case 'dateOfBirth':
+        if (value) {
+          const result = validateNepalDate(value, 'Date of birth');
+          fieldErrors = result.errors;
+          warnings = result.warnings;
         }
-        if (value && !/^[a-zA-Z\s.'-]+$/.test(value)) {
-          fieldErrors.push('Name can only contain letters, spaces, dots, hyphens, and apostrophes');
+        break;
+      
+      case 'holderName':
+        if (value) {
+          if (value.length < 2) {
+            fieldErrors.push('Name must be at least 2 characters');
+          }
+          if (!/^[a-zA-Z\s.'-]+$/u.test(value)) {
+            fieldErrors.push('Name can only contain letters, spaces, dots, hyphens, and apostrophes');
+          }
+          // Check for common OCR errors
+          if (/\d/.test(value)) {
+            warnings.push('Name contains numbers - please verify this is correct');
+          }
         }
         break;
       
       case 'phoneNo':
-        if (value && !/^\d{10}$/.test(value)) {
-          fieldErrors.push('Phone number must be exactly 10 digits');
+        if (value) {
+          const cleaned = value.replace(/\D/g, '');
+          if (cleaned.length !== 10) {
+            fieldErrors.push('Phone number must be exactly 10 digits');
+          }
+          if (cleaned.length === 10 && !cleaned.startsWith('9')) {
+            warnings.push('Nepal mobile numbers typically start with 9');
+          }
         }
         break;
       
       case 'citizenshipNo':
-        if (value && value.length < 10) {
-          fieldErrors.push('Citizenship number must be at least 10 digits');
+        if (value) {
+          const cleaned = value.replace(/\D/g, '');
+          if (cleaned.length < 10) {
+            fieldErrors.push('Citizenship number must be at least 10 digits');
+          }
+          if (cleaned.length > 15) {
+            fieldErrors.push('Citizenship number cannot exceed 15 digits');
+          }
+        }
+        break;
+      
+      case 'address':
+        if (value && value.length < 5) {
+          fieldErrors.push('Address must be at least 5 characters');
         }
         break;
       
@@ -111,6 +148,11 @@ export const useLicenseFormValidation = (licenseData: LicenseData) => {
           fieldErrors.push('Issuing authority must be at least 3 characters');
         }
         break;
+    }
+
+    // Log warnings for user feedback
+    if (warnings.length > 0) {
+      console.warn(`Field ${field} warnings:`, warnings);
     }
 
     setErrors(prev => ({ ...prev, [field]: fieldErrors }));
@@ -131,7 +173,6 @@ export const useLicenseFormValidation = (licenseData: LicenseData) => {
     }));
     setTouched(prev => ({ ...prev, [field]: true }));
     
-    // Validate the field when verifying
     const value = getFieldValue(field);
     validateField(field, value);
   };
@@ -139,28 +180,27 @@ export const useLicenseFormValidation = (licenseData: LicenseData) => {
   const verifyAllFields = () => {
     console.log('Verifying all auto-filled fields');
     const newVerificationStatus = { ...verificationStatus };
+    const newTouched = { ...touched };
     
     Object.keys(autoFilledFields).forEach(field => {
       if (autoFilledFields[field]) {
         newVerificationStatus[field] = 'verified';
-        setTouched(prev => ({ ...prev, [field]: true }));
+        newTouched[field] = true;
         
-        // Validate each field
         const value = getFieldValue(field as keyof LicenseData);
         validateField(field as keyof LicenseData, value);
       }
     });
     
     setVerificationStatus(newVerificationStatus);
+    setTouched(newTouched);
   };
 
   const updateVerificationAfterEdit = (field: keyof LicenseData) => {
-    // Mark as corrected if it was auto-filled and user modified it
     if (autoFilledFields[field] && verificationStatus[field] === 'verified') {
       setVerificationStatus(prev => ({ ...prev, [field]: 'corrected' }));
     }
     
-    // Clear errors when user starts typing
     if (errors[field]) {
       setErrors(prev => ({ ...prev, [field]: [] }));
     }
@@ -169,14 +209,21 @@ export const useLicenseFormValidation = (licenseData: LicenseData) => {
   const validateRequiredFields = (): boolean => {
     const requiredFields: (keyof LicenseData)[] = ['licenseNumber', 'holderName', 'address', 'issueDate', 'expiryDate'];
     let hasErrors = false;
+    const newTouched = { ...touched };
     
     requiredFields.forEach(field => {
       const value = getFieldValue(field);
-      const isValid = validateField(field, value);
-      if (!isValid) hasErrors = true;
-      setTouched(prev => ({ ...prev, [field]: true }));
+      if (!value || value.trim() === '') {
+        setErrors(prev => ({ ...prev, [field]: [`${field} is required`] }));
+        hasErrors = true;
+      } else {
+        const isValid = validateField(field, value);
+        if (!isValid) hasErrors = true;
+      }
+      newTouched[field] = true;
     });
 
+    setTouched(newTouched);
     return !hasErrors;
   };
 
