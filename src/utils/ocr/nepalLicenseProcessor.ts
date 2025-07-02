@@ -1,4 +1,3 @@
-
 import { createWorker, PSM } from 'tesseract.js';
 import { LicenseData } from '@/types/license';
 import { NEPAL_LICENSE_PATTERNS } from './patterns';
@@ -106,7 +105,7 @@ const performMultiPassOCR = async (
   return results;
 };
 
-const performAdvancedExtraction = async (
+export const performAdvancedExtraction = async (
   ocrResults: any[],
   onProgress?: (status: string) => void
 ): Promise<Partial<LicenseData>> => {
