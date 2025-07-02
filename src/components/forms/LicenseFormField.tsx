@@ -4,7 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
-import { CheckCircle, XCircle } from "lucide-react";
+import { CheckCircle, XCircle, Check } from "lucide-react";
 import { LicenseData } from '@/types/license';
 import FieldVerificationBadge from './FieldVerificationBadge';
 
@@ -63,6 +63,20 @@ const LicenseFormField = ({
     return null;
   };
 
+  const getVerificationButtonStyle = () => {
+    if (verificationStatus === 'verified') {
+      return "bg-green-100 hover:bg-green-200 text-green-800 border-green-300";
+    }
+    return "bg-blue-50 hover:bg-blue-100 text-blue-700 border-blue-200";
+  };
+
+  const getVerificationButtonText = () => {
+    if (verificationStatus === 'verified') {
+      return "✓ Verified";
+    }
+    return "✓ Correct";
+  };
+
   return (
     <div className="space-y-2">
       <Label htmlFor={field} className="flex items-center gap-2">
@@ -84,7 +98,7 @@ const LicenseFormField = ({
           >
             <SelectTrigger className={`${errors.length > 0 ? 'border-red-500' : ''} ${
               isAutoFilled && verificationStatus === 'pending' ? 'border-yellow-400 bg-yellow-50' : ''
-            }`}>
+            } ${verificationStatus === 'verified' ? 'border-green-300 bg-green-50' : ''}`}>
               <SelectValue placeholder={placeholder} />
             </SelectTrigger>
             <SelectContent>
@@ -106,7 +120,7 @@ const LicenseFormField = ({
             disabled={disabled}
             className={`${errors.length > 0 ? 'border-red-500' : ''} ${
               isAutoFilled && verificationStatus === 'pending' ? 'border-yellow-400 bg-yellow-50' : ''
-            }`}
+            } ${verificationStatus === 'verified' ? 'border-green-300 bg-green-50' : ''}`}
           />
         ) : (
           <Input
@@ -120,19 +134,26 @@ const LicenseFormField = ({
             disabled={disabled}
             className={`${errors.length > 0 ? 'border-red-500' : ''} ${
               isAutoFilled && verificationStatus === 'pending' ? 'border-yellow-400 bg-yellow-50' : ''
-            }`}
+            } ${verificationStatus === 'verified' ? 'border-green-300 bg-green-50' : ''}`}
           />
         )}
         
-        {isAutoFilled && verificationStatus === 'pending' && onVerify && (
+        {isAutoFilled && onVerify && (
           <Button
             type="button"
             variant="outline"
             size="sm"
             onClick={onVerify}
-            className="absolute right-2 top-2 h-6 px-2 text-xs bg-green-50 hover:bg-green-100 text-green-700 border-green-200"
+            className={`absolute right-2 top-2 h-6 px-2 text-xs ${getVerificationButtonStyle()}`}
           >
-            ✓ Correct
+            {verificationStatus === 'verified' ? (
+              <>
+                <Check className="w-3 h-3 mr-1" />
+                {getVerificationButtonText()}
+              </>
+            ) : (
+              getVerificationButtonText()
+            )}
           </Button>
         )}
       </div>

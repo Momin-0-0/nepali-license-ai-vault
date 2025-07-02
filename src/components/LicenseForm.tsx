@@ -1,8 +1,7 @@
-
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { FileText, AlertCircle, Loader2 } from "lucide-react";
+import { FileText, AlertCircle, Loader2, CheckCircle2 } from "lucide-react";
 import { LicenseData } from '@/types/license';
 import { validateNepalLicenseNumber, validateDate, validateExpiryDate, sanitizeInput } from '@/utils/validation';
 import LicenseFormField from './forms/LicenseFormField';
@@ -49,13 +48,18 @@ const LicenseForm = ({
       const value = licenseData[field as keyof LicenseData];
       if (value && value.toString().trim() !== '') {
         autoFilled[field] = true;
-        newVerificationStatus[field] = 'pending';
+        // Keep existing verification status if field was already verified
+        if (verificationStatus[field] !== 'verified') {
+          newVerificationStatus[field] = 'pending';
+        } else {
+          newVerificationStatus[field] = 'verified';
+        }
         console.log(`Auto-filled field detected: ${field} = ${value}`);
       }
     });
     
     setAutoFilledFields(autoFilled);
-    setVerificationStatus(newVerificationStatus);
+    setVerificationStatus(prev => ({ ...prev, ...newVerificationStatus }));
     
     const autoFilledCount = Object.keys(autoFilled).length;
     console.log(`Total auto-filled fields: ${autoFilledCount}`);
@@ -68,8 +72,8 @@ const LicenseForm = ({
       [field]: field === 'bloodGroup' ? (value as LicenseData['bloodGroup']) : sanitizedValue
     });
     
-    // Mark as corrected if it was auto-filled
-    if (autoFilledFields[field]) {
+    // Mark as corrected if it was auto-filled and user modified it
+    if (autoFilledFields[field] && verificationStatus[field] === 'verified') {
       setVerificationStatus(prev => ({ ...prev, [field]: 'corrected' }));
     }
     
@@ -80,8 +84,34 @@ const LicenseForm = ({
   };
 
   const verifyField = (field: keyof LicenseData) => {
-    setVerificationStatus(prev => ({ ...prev, [field]: 'verified' }));
+    console.log(`Verifying field: ${field}`);
+    setVerificationStatus(prev => ({ 
+      ...prev, 
+      [field]: prev[field] === 'verified' ? 'pending' : 'verified' 
+    }));
     setTouched(prev => ({ ...prev, [field]: true }));
+    
+    // Validate the field when verifying
+    const value = getFieldValue(field);
+    validateField(field, value);
+  };
+
+  const verifyAllFields = () => {
+    console.log('Verifying all auto-filled fields');
+    const newVerificationStatus = { ...verificationStatus };
+    
+    Object.keys(autoFilledFields).forEach(field => {
+      if (autoFilledFields[field]) {
+        newVerificationStatus[field] = 'verified';
+        setTouched(prev => ({ ...prev, [field]: true }));
+        
+        // Validate each field
+        const value = getFieldValue(field as keyof LicenseData);
+        validateField(field as keyof LicenseData, value);
+      }
+    });
+    
+    setVerificationStatus(newVerificationStatus);
   };
 
   const validateField = (field: keyof LicenseData, value: string | undefined) => {
@@ -180,6 +210,8 @@ const LicenseForm = ({
   };
 
   const autoFilledCount = Object.keys(autoFilledFields).length;
+  const verifiedCount = Object.values(verificationStatus).filter(status => status === 'verified').length;
+  const pendingCount = Object.values(verificationStatus).filter(status => status === 'pending').length;
 
   return (
     <Card className={disabled ? 'opacity-60' : ''}>
@@ -206,7 +238,34 @@ const LicenseForm = ({
           onClose={() => setShowVerificationHelper(false)}
         />
 
+        {/* Verification Summary and Verify All Button */}
+        {autoFilledCount > 0 && (
+          <Card className="mb-6 border-blue-200 bg-blue-50/30">
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-4">
+                  <div className="text-sm text-blue-700">
+                    <span className="font-medium">Verification Status:</span> {verifiedCount} verified, {pendingCount} pending
+                  </div>
+                </div>
+                {pendingCount > 0 && (
+                  <Button
+                    type="button"
+                    onClick={verifyAllFields}
+                    className="bg-green-600 hover:bg-green-700 text-white"
+                    size="sm"
+                  >
+                    <CheckCircle2 className="w-4 h-4 mr-1" />
+                    Verify All ({pendingCount})
+                  </Button>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
         <form onSubmit={handleSubmit} className="space-y-4">
+          {/* License Number Field */}
           <LicenseFormField
             field="licenseNumber"
             label="License Number (Nepal Format: XX-XXX-XXXXXX)"
@@ -223,6 +282,7 @@ const LicenseForm = ({
             touched={touched['licenseNumber']}
           />
 
+          {/* Holder Name Field */}
           <LicenseFormField
             field="holderName"
             label="Name (As on License)"
@@ -239,6 +299,7 @@ const LicenseForm = ({
             touched={touched['holderName']}
           />
 
+          {/* Date Fields */}
           <div className="grid grid-cols-2 gap-4">
             <LicenseFormField
               field="dateOfBirth"
@@ -271,6 +332,7 @@ const LicenseForm = ({
             />
           </div>
 
+          {/* Address Field */}
           <LicenseFormField
             field="address"
             label="Address (As on License)"
@@ -288,6 +350,7 @@ const LicenseForm = ({
             touched={touched['address']}
           />
 
+          
           <div className="grid grid-cols-2 gap-4">
             <LicenseFormField
               field="citizenshipNo"
