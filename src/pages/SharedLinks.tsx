@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from "@/components/ui/button";
@@ -134,13 +135,24 @@ const SharedLinks = () => {
       {/* Header */}
       <header className="border-b bg-white/80 backdrop-blur-sm">
         <div className="container mx-auto px-4 py-4 flex justify-between items-center">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-gradient-to-br from-blue-600 to-red-600 rounded-lg flex items-center justify-center">
-              <Shield className="w-6 h-6 text-white" />
+          <div className="flex items-center gap-3 cursor-pointer" onClick={() => navigate('/dashboard')}>
+            <div className="w-12 h-12 rounded-lg overflow-hidden shadow-lg hover:shadow-xl transition-shadow">
+              <img 
+                src="/Gemini_Generated_Image_w0veeiw0veeiw0ve 1.png" 
+                alt="NepLife Logo"
+                className="w-full h-full object-contain bg-white"
+              />
             </div>
-            <h1 className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-red-600 bg-clip-text text-transparent">
-              Shared Links
-            </h1>
+            <div>
+              <h1 className="text-xl font-bold bg-gradient-to-r from-blue-600 to-green-600 bg-clip-text text-transparent">
+                NepLife
+              </h1>
+              <div className="flex items-center gap-2">
+                <Badge variant="outline" className="text-xs bg-blue-50 text-blue-700 border-blue-200">
+                  AI Powered
+                </Badge>
+              </div>
+            </div>
           </div>
           <Button onClick={() => navigate('/dashboard')} variant="outline">
             Back to Dashboard
