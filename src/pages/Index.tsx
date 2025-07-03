@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Button } from "@/components/ui/button";
@@ -11,7 +12,7 @@ const Index = () => {
   // Handle smooth scrolling and active section tracking
   useEffect(() => {
     const handleScroll = () => {
-      const sections = ['features', 'pricing', 'contact'];
+      const sections = ['features', 'contact'];
       const scrollPosition = window.scrollY + 100;
 
       for (const section of sections) {
@@ -46,7 +47,6 @@ const Index = () => {
 
   const navItems = [
     { id: 'features', label: 'Features' },
-    { id: 'pricing', label: 'Pricing' },
     { id: 'contact', label: 'Contact' }
   ];
 
@@ -163,22 +163,6 @@ const Index = () => {
               </Button>
             </Link>
           </div>
-
-          {/* Trust Indicators */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-3xl mx-auto">
-            <div className="flex items-center justify-center gap-3 text-gray-600">
-              <CheckCircle className="w-5 h-5 text-green-600" />
-              <span className="font-medium">Bank-Level Security</span>
-            </div>
-            <div className="flex items-center justify-center gap-3 text-gray-600">
-              <CheckCircle className="w-5 h-5 text-green-600" />
-              <span className="font-medium">Government Approved</span>
-            </div>
-            <div className="flex items-center justify-center gap-3 text-gray-600">
-              <CheckCircle className="w-5 h-5 text-green-600" />
-              <span className="font-medium">24/7 Support</span>
-            </div>
-          </div>
         </div>
       </section>
 
@@ -264,114 +248,6 @@ const Index = () => {
                 Never lose your documents with automatic cloud synchronization and data recovery
               </CardDescription>
             </CardHeader>
-          </Card>
-        </div>
-      </section>
-
-      {/* Pricing Section */}
-      <section id="pricing" className="container mx-auto px-4 py-20 lg:py-32 bg-gray-50">
-        <div className="text-center mb-20">
-          <h3 className="text-4xl md:text-5xl font-bold mb-6 bg-gradient-to-r from-gray-800 to-gray-600 bg-clip-text text-transparent">
-            Simple Pricing
-          </h3>
-          <p className="text-xl text-gray-600 max-w-3xl mx-auto leading-relaxed">
-            Choose the plan that works best for you
-          </p>
-        </div>
-
-        <div className="grid md:grid-cols-3 gap-8 max-w-5xl mx-auto">
-          <Card className="border-2 hover:shadow-xl transition-all duration-300">
-            <CardHeader className="text-center">
-              <CardTitle className="text-2xl">Basic</CardTitle>
-              <div className="text-4xl font-bold text-blue-600">Free</div>
-              <CardDescription>Perfect for individual users</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <ul className="space-y-3 text-sm">
-                <li className="flex items-center gap-2">
-                  <CheckCircle className="w-4 h-4 text-green-600" />
-                  Up to 3 licenses
-                </li>
-                <li className="flex items-center gap-2">
-                  <CheckCircle className="w-4 h-4 text-green-600" />
-                  Basic OCR scanning
-                </li>
-                <li className="flex items-center gap-2">
-                  <CheckCircle className="w-4 h-4 text-green-600" />
-                  Expiry reminders
-                </li>
-              </ul>
-              <Button className="w-full mt-6" variant="outline">Get Started</Button>
-            </CardContent>
-          </Card>
-
-          <Card className="border-2 border-blue-500 hover:shadow-xl transition-all duration-300 relative">
-            <div className="absolute -top-3 left-1/2 transform -translate-x-1/2">
-              <span className="bg-blue-500 text-white px-4 py-1 rounded-full text-sm font-medium">Popular</span>
-            </div>
-            <CardHeader className="text-center">
-              <CardTitle className="text-2xl">Pro</CardTitle>
-              <div className="text-4xl font-bold text-blue-600">$9.99<span className="text-lg text-gray-500">/mo</span></div>
-              <CardDescription>For power users and families</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <ul className="space-y-3 text-sm">
-                <li className="flex items-center gap-2">
-                  <CheckCircle className="w-4 h-4 text-green-600" />
-                  Unlimited licenses
-                </li>
-                <li className="flex items-center gap-2">
-                  <CheckCircle className="w-4 h-4 text-green-600" />
-                  Advanced OCR with 99% accuracy
-                </li>
-                <li className="flex items-center gap-2">
-                  <CheckCircle className="w-4 h-4 text-green-600" />
-                  Smart reminders & notifications
-                </li>
-                <li className="flex items-center gap-2">
-                  <CheckCircle className="w-4 h-4 text-green-600" />
-                  Secure sharing with QR codes
-                </li>
-                <li className="flex items-center gap-2">
-                  <CheckCircle className="w-4 h-4 text-green-600" />
-                  Cloud backup & sync
-                </li>
-              </ul>
-              <Button className="w-full mt-6 bg-gradient-to-r from-blue-600 to-purple-600">Get Started</Button>
-            </CardContent>
-          </Card>
-
-          <Card className="border-2 hover:shadow-xl transition-all duration-300">
-            <CardHeader className="text-center">
-              <CardTitle className="text-2xl">Enterprise</CardTitle>
-              <div className="text-4xl font-bold text-blue-600">Custom</div>
-              <CardDescription>For organizations and fleets</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <ul className="space-y-3 text-sm">
-                <li className="flex items-center gap-2">
-                  <CheckCircle className="w-4 h-4 text-green-600" />
-                  Everything in Pro
-                </li>
-                <li className="flex items-center gap-2">
-                  <CheckCircle className="w-4 h-4 text-green-600" />
-                  Bulk license management
-                </li>
-                <li className="flex items-center gap-2">
-                  <CheckCircle className="w-4 h-4 text-green-600" />
-                  API access
-                </li>
-                <li className="flex items-center gap-2">
-                  <CheckCircle className="w-4 h-4 text-green-600" />
-                  Priority support
-                </li>
-                <li className="flex items-center gap-2">
-                  <CheckCircle className="w-4 h-4 text-green-600" />
-                  Custom integrations
-                </li>
-              </ul>
-              <Button className="w-full mt-6" variant="outline">Contact Sales</Button>
-            </CardContent>
           </Card>
         </div>
       </section>
@@ -477,7 +353,6 @@ const Index = () => {
               <h5 className="font-bold text-lg mb-6">Product</h5>
               <ul className="space-y-4 text-gray-400">
                 <li><button onClick={() => scrollToSection('features')} className="hover:text-white transition-colors">Features</button></li>
-                <li><button onClick={() => scrollToSection('pricing')} className="hover:text-white transition-colors">Pricing</button></li>
                 <li><Link to="/loading-demo" className="hover:text-white transition-colors">Demo</Link></li>
                 <li><a href="#" className="hover:text-white transition-colors">Security</a></li>
               </ul>
