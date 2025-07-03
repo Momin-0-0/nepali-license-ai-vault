@@ -16,6 +16,7 @@ import LoadingSpinner from "@/components/LoadingSpinner";
 import DashboardStats from "@/components/DashboardStats";
 import { useOfflineSync } from "@/hooks/useOfflineSync";
 import { useLocalStorage } from "@/hooks/useLocalStorage";
+import AIInsights from "@/components/AIInsights";
 
 interface License {
   id: string;
@@ -125,7 +126,7 @@ const Dashboard = () => {
             Welcome back, {user?.name || user?.firstName || 'User'}!
           </h2>
           <p className="text-gray-600">
-            Manage your driving licenses and stay on top of renewals
+            Manage your driving licenses and stay on top of renewals with AI-powered insights
           </p>
         </div>
 
@@ -134,6 +135,11 @@ const Dashboard = () => {
 
         {/* Enhanced Stats Dashboard */}
         <DashboardStats licenses={licenses} />
+
+        {/* AI Insights Section */}
+        <div className="mb-8">
+          <AIInsights licenses={licenses} />
+        </div>
 
         {/* Quick Actions */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
