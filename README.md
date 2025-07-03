@@ -1,8 +1,43 @@
 # Welcome to your Lovable project
 
+[![Deploy to Netlify](https://www.netlify.com/img/deploy/button.svg)](https://app.netlify.com/start/deploy?repository=https://github.com/YOUR_USERNAME/YOUR_REPOSITORY_NAME)
+
+> **Note:** Replace `YOUR_USERNAME/YOUR_REPOSITORY_NAME` with your actual GitHub repository URL to enable one-click deployment.
+
 ## Project info
 
 **URL**: https://lovable.dev/projects/35d0428c-7c39-48fd-9997-88fce1f6bc18
+
+## About NepLife
+
+NepLife is a Smart Driving License Management application designed specifically for Nepal. It features AI-powered OCR technology to digitize, manage, and share driving licenses with intelligent reminders and secure cloud storage.
+
+### Key Features
+
+- 🤖 **AI-Powered OCR**: Automatically extract license details from Nepal driving license images
+- 🔔 **Smart Reminders**: Intelligent notification system for license expiry dates
+- 🔒 **Secure Sharing**: Encrypted, time-limited links with QR codes for authorities
+- 📱 **Mobile Friendly**: Responsive design with offline support
+- 🛡️ **Bank-Level Security**: Enterprise-grade encryption and secure cloud storage
+- ☁️ **Cloud Backup**: Automatic synchronization and data recovery
+
+## Quick Deploy
+
+### One-Click Deployment
+
+Click the "Deploy to Netlify" button above for instant deployment to Netlify. This will:
+
+1. Fork the repository to your GitHub account
+2. Deploy the application to Netlify
+3. Set up automatic deployments for future updates
+
+### Manual Deployment
+
+You can also deploy to other platforms:
+
+- **Vercel**: Connect your GitHub repository to Vercel
+- **Firebase Hosting**: Use `npm run build` and deploy the `dist` folder
+- **GitHub Pages**: Enable GitHub Pages in your repository settings
 
 ## How can I edit this code?
 
@@ -54,20 +89,53 @@ npm run dev
 
 This project is built with:
 
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
+- **Frontend**: React 18 with TypeScript
+- **Styling**: Tailwind CSS with shadcn/ui components
+- **Build Tool**: Vite for fast development and optimized builds
+- **OCR**: Tesseract.js for AI-powered license text extraction
+- **State Management**: React Query for server state management
+- **Routing**: React Router DOM for navigation
+- **Form Handling**: React Hook Form with Zod validation
+- **Icons**: Lucide React for beautiful icons
+- **Charts**: Recharts for analytics visualization
+- **QR Codes**: QRCode library for secure sharing
+- **Date Handling**: date-fns for date manipulation
+- **Storage**: Local storage with encryption for data persistence
 
-## How can I deploy this project?
+## Environment Setup
 
-Simply open [Lovable](https://lovable.dev/projects/35d0428c-7c39-48fd-9997-88fce1f6bc18) and click on Share -> Publish.
+The application works out of the box with no additional configuration required for basic functionality. For production deployment, ensure:
 
-## Can I connect a custom domain to my Lovable project?
+1. **Build the project**: `npm run build`
+2. **Set up HTTPS**: Required for PWA features and secure storage
+3. **Configure CSP**: Content Security Policy headers for enhanced security
 
-Yes, you can!
+## Browser Support
 
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
+- Chrome/Chromium 90+
+- Firefox 88+
+- Safari 14+
+- Edge 90+
 
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/tips-tricks/custom-domain#step-by-step-guide)
+## Contributing
+
+1. Fork the repository
+2. Create a feature branch: `git checkout -b feature/amazing-feature`
+3. Commit your changes: `git commit -m 'Add amazing feature'`
+4. Push to the branch: `git push origin feature/amazing-feature`
+5. Open a Pull Request
+
+## License
+
+This project is licensed under the MIT License - see the LICENSE file for details.
+
+## Support
+
+For support and questions:
+- Open an issue on GitHub
+- Visit the [Lovable Project](https://lovable.dev/projects/35d0428c-7c39-48fd-9997-88fce1f6bc18)
+- Email: support@neplife.com
+
+---
+
+Made with ❤️ for Nepal by the NepLife Team
