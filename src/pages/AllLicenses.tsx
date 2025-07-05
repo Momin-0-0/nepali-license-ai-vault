@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from "@/components/ui/button";
@@ -7,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Shield, ArrowLeft, FileText, Search, Filter, Download, Share2, Edit, Trash2, Plus } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { format, differenceInDays, parseISO } from 'date-fns';
+import { format, differenceInDays, parseISO, isValid } from 'date-fns';
 
 interface License {
   id: string;
@@ -47,8 +46,25 @@ const AllLicenses = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
 
+  const safeParseDate = (dateString: string) => {
+    if (!dateString || typeof dateString !== 'string') return null;
+    const parsed = parseISO(dateString);
+    return isValid(parsed) ? parsed : null;
+  };
+
+  const safeFormatDate = (dateString: string, formatStr: string = 'MMM dd, yyyy') => {
+    const date = safeParseDate(dateString);
+    return date ? format(date, formatStr) : 'Invalid Date';
+  };
+
+  const getDaysUntilExpiry = (expiryDate: string) => {
+    const date = safeParseDate(expiryDate);
+    return date ? differenceInDays(date, new Date()) : null;
+  };
+
   const getExpiryStatus = (expiryDate: string) => {
-    const days = differenceInDays(parseISO(expiryDate), new Date());
+    const days = getDaysUntilExpiry(expiryDate);
+    if (days === null) return { status: 'unknown', color: 'text-gray-600', bg: 'bg-gray-50' };
     if (days < 0) return { status: 'expired', color: 'text-red-600', bg: 'bg-red-50' };
     if (days <= 7) return { status: 'critical', color: 'text-orange-600', bg: 'bg-orange-50' };
     if (days <= 30) return { status: 'warning', color: 'text-yellow-600', bg: 'bg-yellow-50' };
@@ -61,16 +77,16 @@ const AllLicenses = () => {
     
     if (filterStatus === 'all') return matchesSearch;
     if (filterStatus === 'expired') {
-      const days = differenceInDays(parseISO(license.expiryDate), new Date());
-      return matchesSearch && days < 0;
+      const days = getDaysUntilExpiry(license.expiryDate);
+      return matchesSearch && days !== null && days < 0;
     }
     if (filterStatus === 'expiring') {
-      const days = differenceInDays(parseISO(license.expiryDate), new Date());
-      return matchesSearch && days >= 0 && days <= 30;
+      const days = getDaysUntilExpiry(license.expiryDate);
+      return matchesSearch && days !== null && days >= 0 && days <= 30;
     }
     if (filterStatus === 'valid') {
-      const days = differenceInDays(parseISO(license.expiryDate), new Date());
-      return matchesSearch && days > 30;
+      const days = getDaysUntilExpiry(license.expiryDate);
+      return matchesSearch && days !== null && days > 30;
     }
     return matchesSearch;
   });
@@ -173,7 +189,7 @@ const AllLicenses = () => {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {filteredLicenses.map(license => {
               const { status, color, bg } = getExpiryStatus(license.expiryDate);
-              const daysLeft = differenceInDays(parseISO(license.expiryDate), new Date());
+              const daysLeft = getDaysUntilExpiry(license.expiryDate);
               
               return (
                 <Card key={license.id} className="hover:shadow-lg transition-shadow">
@@ -186,7 +202,8 @@ const AllLicenses = () => {
                       <div className={`px-2 py-1 rounded-full text-xs font-medium ${bg} ${color}`}>
                         {status === 'expired' ? 'Expired' : 
                          status === 'critical' ? 'Critical' :
-                         status === 'warning' ? 'Expiring' : 'Valid'}
+                         status === 'warning' ? 'Expiring' : 
+                         status === 'unknown' ? 'Unknown' : 'Valid'}
                       </div>
                     </div>
                   </CardHeader>
@@ -198,16 +215,16 @@ const AllLicenses = () => {
                       </div>
                       <div className="flex justify-between">
                         <span className="text-gray-500">Issue Date:</span>
-                        <span className="font-medium">{format(parseISO(license.issueDate), 'MMM dd, yyyy')}</span>
+                        <span className="font-medium">{safeFormatDate(license.issueDate)}</span>
                       </div>
                       <div className="flex justify-between">
                         <span className="text-gray-500">Expiry Date:</span>
-                        <span className="font-medium">{format(parseISO(license.expiryDate), 'MMM dd, yyyy')}</span>
+                        <span className="font-medium">{safeFormatDate(license.expiryDate)}</span>
                       </div>
                       <div className="flex justify-between">
                         <span className="text-gray-500">Days Left:</span>
                         <span className={`font-medium ${color}`}>
-                          {daysLeft < 0 ? 'Expired' : `${daysLeft} days`}
+                          {daysLeft === null ? 'Unknown' : daysLeft < 0 ? 'Expired' : `${daysLeft} days`}
                         </span>
                       </div>
                     </div>

@@ -1,6 +1,5 @@
-
 import { useState, useMemo } from 'react';
-import { differenceInDays, parseISO, isWithinInterval, startOfMonth, endOfMonth, startOfYear, endOfYear } from 'date-fns';
+import { differenceInDays, parseISO, isWithinInterval, startOfMonth, endOfMonth, startOfYear, endOfYear, isValid } from 'date-fns';
 
 interface FilterOptions {
   status?: 'all' | 'active' | 'expiring' | 'expired';
@@ -19,6 +18,12 @@ export const useSearch = <T extends Record<string, any>>(
 ) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [filters, setFilters] = useState<FilterOptions>({});
+
+  const safeParseDate = (dateString: string) => {
+    if (!dateString || typeof dateString !== 'string') return null;
+    const parsed = parseISO(dateString);
+    return isValid(parsed) ? parsed : null;
+  };
 
   const filteredItems = useMemo(() => {
     let result = items;
@@ -56,9 +61,8 @@ export const useSearch = <T extends Record<string, any>>(
       const now = new Date();
       result = result.filter(item => {
         const dateStr = filterConfig.getDate!(item);
-        if (!dateStr) return false;
-        
-        const date = parseISO(dateStr);
+        const date = safeParseDate(dateStr);
+        if (!date) return false;
         
         switch (filters.dateRange) {
           case 'thisMonth':
@@ -93,7 +97,16 @@ export const useSearch = <T extends Record<string, any>>(
 
 // Helper function for license status
 export const getLicenseStatus = (expiryDate: string): 'active' | 'expiring' | 'expired' => {
-  const days = differenceInDays(parseISO(expiryDate), new Date());
+  const safeParseDate = (dateString: string) => {
+    if (!dateString || typeof dateString !== 'string') return null;
+    const parsed = parseISO(dateString);
+    return isValid(parsed) ? parsed : null;
+  };
+
+  const date = safeParseDate(expiryDate);
+  if (!date) return 'expired'; // Treat invalid dates as expired
+  
+  const days = differenceInDays(date, new Date());
   
   if (days < 0) return 'expired';
   if (days <= 30) return 'expiring';

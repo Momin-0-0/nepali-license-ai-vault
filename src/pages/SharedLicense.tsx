@@ -1,10 +1,9 @@
-
 import { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Shield, Calendar, User, MapPin, FileText, AlertCircle, CheckCircle } from "lucide-react";
-import { format, parseISO } from 'date-fns';
+import { format, parseISO, isValid } from 'date-fns';
 
 interface License {
   id: string;
@@ -23,6 +22,17 @@ const SharedLicense = () => {
   const [isValid, setIsValid] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+
+  const safeParseDate = (dateString: string) => {
+    if (!dateString || typeof dateString !== 'string') return null;
+    const parsed = parseISO(dateString);
+    return isValid(parsed) ? parsed : null;
+  };
+
+  const safeFormatDate = (dateString: string, formatStr: string = 'MMM dd, yyyy') => {
+    const date = safeParseDate(dateString);
+    return date ? format(date, formatStr) : 'Invalid Date';
+  };
 
   useEffect(() => {
     if (!shareToken) {
@@ -46,7 +56,8 @@ const SharedLicense = () => {
         }
 
         // Check if link is expired
-        if (new Date(sharedLink.expiresAt) < new Date()) {
+        const expiryDate = safeParseDate(sharedLink.expiresAt);
+        if (expiryDate && expiryDate < new Date()) {
           setError('This share link has expired');
           setLoading(false);
           return;
@@ -104,7 +115,8 @@ const SharedLicense = () => {
 
   if (!license) return null;
 
-  const isExpired = new Date(license.expiryDate) < new Date();
+  const expiryDate = safeParseDate(license.expiryDate);
+  const isExpired = expiryDate ? expiryDate < new Date() : false;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-red-50">
@@ -194,7 +206,7 @@ const SharedLicense = () => {
                       <div>
                         <p className="text-sm text-gray-500">Issue Date</p>
                         <p className="font-semibold">
-                          {license.issueDate ? format(parseISO(license.issueDate), 'MMM dd, yyyy') : 'N/A'}
+                          {safeFormatDate(license.issueDate)}
                         </p>
                       </div>
                     </div>
@@ -204,7 +216,7 @@ const SharedLicense = () => {
                       <div>
                         <p className="text-sm text-gray-500">Expiry Date</p>
                         <p className={`font-semibold ${isExpired ? 'text-red-600' : 'text-green-600'}`}>
-                          {format(parseISO(license.expiryDate), 'MMM dd, yyyy')}
+                          {safeFormatDate(license.expiryDate)}
                         </p>
                       </div>
                     </div>

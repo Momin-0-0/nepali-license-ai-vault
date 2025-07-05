@@ -1,5 +1,4 @@
-
-import { differenceInDays, parseISO, format, startOfMonth, endOfMonth } from 'date-fns';
+import { differenceInDays, parseISO, format, startOfMonth, endOfMonth, isValid } from 'date-fns';
 
 export interface UsageInsight {
   type: 'trend' | 'pattern' | 'recommendation' | 'alert';
@@ -20,6 +19,12 @@ export interface UsageStats {
 }
 
 class UsageAnalyticsService {
+  private safeParseDate(dateString: string) {
+    if (!dateString || typeof dateString !== 'string') return null;
+    const parsed = parseISO(dateString);
+    return isValid(parsed) ? parsed : null;
+  }
+
   generateInsights(licenses: any[], activityLog: any[] = []): {
     insights: UsageInsight[];
     stats: UsageStats;
@@ -34,23 +39,34 @@ class UsageAnalyticsService {
 
   private calculateStats(licenses: any[]): UsageStats {
     const now = new Date();
-    const activeLicenses = licenses.filter(l => 
-      differenceInDays(parseISO(l.expiryDate), now) > 0
-    );
+    const activeLicenses = licenses.filter(l => {
+      const expiryDate = this.safeParseDate(l.expiryDate);
+      return expiryDate && differenceInDays(expiryDate, now) > 0;
+    });
+    
     const expiringLicenses = licenses.filter(l => {
-      const days = differenceInDays(parseISO(l.expiryDate), now);
+      const expiryDate = this.safeParseDate(l.expiryDate);
+      if (!expiryDate) return false;
+      const days = differenceInDays(expiryDate, now);
       return days <= 30 && days >= 0;
     });
     
-    const totalValidityDays = licenses.reduce((sum, license) => {
-      return sum + differenceInDays(parseISO(license.expiryDate), parseISO(license.issueDate));
+    const validLicenses = licenses.filter(l => 
+      this.safeParseDate(l.expiryDate) && this.safeParseDate(l.issueDate)
+    );
+    
+    const totalValidityDays = validLicenses.reduce((sum, license) => {
+      const expiryDate = this.safeParseDate(license.expiryDate);
+      const issueDate = this.safeParseDate(license.issueDate);
+      if (!expiryDate || !issueDate) return sum;
+      return sum + differenceInDays(expiryDate, issueDate);
     }, 0);
     
     return {
       totalLicenses: licenses.length,
       activeLicenses: activeLicenses.length,
       expiringLicenses: expiringLicenses.length,
-      averageValidityDays: licenses.length > 0 ? totalValidityDays / licenses.length : 0,
+      averageValidityDays: validLicenses.length > 0 ? totalValidityDays / validLicenses.length : 0,
       uploadFrequency: this.calculateUploadFrequency(licenses),
       renewalPatterns: this.analyzeRenewalPatterns(licenses)
     };
@@ -59,14 +75,14 @@ class UsageAnalyticsService {
   private calculateUploadFrequency(licenses: any[]): number {
     if (licenses.length < 2) return 0;
     
-    const dates = licenses
-      .filter(l => l.createdAt)
-      .map(l => parseISO(l.createdAt))
+    const validDates = licenses
+      .filter(l => l.createdAt && this.safeParseDate(l.createdAt))
+      .map(l => this.safeParseDate(l.createdAt)!)
       .sort((a, b) => a.getTime() - b.getTime());
     
-    if (dates.length < 2) return 0;
+    if (validDates.length < 2) return 0;
     
-    const totalDays = differenceInDays(dates[dates.length - 1], dates[0]);
+    const totalDays = differenceInDays(validDates[validDates.length - 1], validDates[0]);
     return totalDays > 0 ? licenses.length / (totalDays / 30) : 0; // licenses per month
   }
 
@@ -80,7 +96,10 @@ class UsageAnalyticsService {
     
     const now = new Date();
     licenses.forEach(license => {
-      const daysLeft = differenceInDays(parseISO(license.expiryDate), now);
+      const expiryDate = this.safeParseDate(license.expiryDate);
+      if (!expiryDate) return;
+      
+      const daysLeft = differenceInDays(expiryDate, now);
       
       if (daysLeft < 0) patterns.expired++;
       else if (daysLeft <= 7) patterns.lastMinute++;
@@ -183,7 +202,9 @@ class UsageAnalyticsService {
     
     // Predict renewal workload
     const upcomingRenewals = licenses.filter(l => {
-      const days = differenceInDays(parseISO(l.expiryDate), new Date());
+      const expiryDate = this.safeParseDate(l.expiryDate);
+      if (!expiryDate) return false;
+      const days = differenceInDays(expiryDate, new Date());
       return days > 0 && days <= 90;
     }).length;
     
@@ -204,9 +225,10 @@ class UsageAnalyticsService {
     const now = new Date();
     
     // Immediate attention needed
-    const criticalLicenses = licenses.filter(l => 
-      differenceInDays(parseISO(l.expiryDate), now) <= 7
-    );
+    const criticalLicenses = licenses.filter(l => {
+      const expiryDate = this.safeParseDate(l.expiryDate);
+      return expiryDate && differenceInDays(expiryDate, now) <= 7;
+    });
     
     if (criticalLicenses.length > 0) {
       insights.push({

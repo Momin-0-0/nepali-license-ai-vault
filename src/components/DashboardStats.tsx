@@ -1,20 +1,44 @@
-
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { FileText, Shield, Clock, Share2, TrendingUp, Calendar } from "lucide-react";
-import { differenceInDays, parseISO, format } from 'date-fns';
+import { differenceInDays, parseISO, format, isValid } from 'date-fns';
 
 interface DashboardStatsProps {
   licenses: any[];
 }
 
 const DashboardStats = ({ licenses }: DashboardStatsProps) => {
-  const activeLicenses = licenses.filter(l => differenceInDays(parseISO(l.expiryDate), new Date()) > 0);
-  const expiringLicenses = licenses.filter(l => {
-    const days = differenceInDays(parseISO(l.expiryDate), new Date());
-    return days <= 30 && days >= 0;
+  const safeParseDate = (dateString: string) => {
+    if (!dateString || typeof dateString !== 'string') return null;
+    const parsed = parseISO(dateString);
+    return isValid(parsed) ? parsed : null;
+  };
+
+  const safeFormatDate = (dateString: string, formatStr: string = 'MMM dd, yyyy') => {
+    const date = safeParseDate(dateString);
+    return date ? format(date, formatStr) : 'Invalid Date';
+  };
+
+  const getDaysUntilExpiry = (expiryDate: string) => {
+    const date = safeParseDate(expiryDate);
+    return date ? differenceInDays(date, new Date()) : null;
+  };
+
+  const activeLicenses = licenses.filter(l => {
+    const days = getDaysUntilExpiry(l.expiryDate);
+    return days !== null && days > 0;
   });
+
+  const expiringLicenses = licenses.filter(l => {
+    const days = getDaysUntilExpiry(l.expiryDate);
+    return days !== null && days <= 30 && days >= 0;
+  });
+
   const sharedLicenses = licenses.filter(l => l.shared);
-  const expiredLicenses = licenses.filter(l => differenceInDays(parseISO(l.expiryDate), new Date()) < 0);
+  
+  const expiredLicenses = licenses.filter(l => {
+    const days = getDaysUntilExpiry(l.expiryDate);
+    return days !== null && days < 0;
+  });
 
   const stats = [
     {
@@ -51,6 +75,20 @@ const DashboardStats = ({ licenses }: DashboardStatsProps) => {
     }
   ];
 
+  const getNextExpiryDate = () => {
+    const validActiveLicenses = activeLicenses.filter(l => safeParseDate(l.expiryDate));
+    if (validActiveLicenses.length === 0) return 'No active licenses';
+    
+    const sortedLicenses = validActiveLicenses.sort((a, b) => {
+      const dateA = safeParseDate(a.expiryDate);
+      const dateB = safeParseDate(b.expiryDate);
+      if (!dateA || !dateB) return 0;
+      return dateA.getTime() - dateB.getTime();
+    });
+    
+    return safeFormatDate(sortedLicenses[0].expiryDate);
+  };
+
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
       {stats.map((stat, index) => (
@@ -82,12 +120,7 @@ const DashboardStats = ({ licenses }: DashboardStatsProps) => {
             <div className="flex items-center gap-2">
               <Calendar className="w-4 h-4 text-indigo-600" />
               <span className="text-gray-600">
-                Next expiry: {activeLicenses.length > 0 ? 
-                  format(parseISO(activeLicenses.sort((a, b) => 
-                    new Date(a.expiryDate).getTime() - new Date(b.expiryDate).getTime()
-                  )[0].expiryDate), 'MMM dd, yyyy') : 
-                  'No active licenses'
-                }
+                Next expiry: {getNextExpiryDate()}
               </span>
             </div>
             <div className="flex items-center gap-2">

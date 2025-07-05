@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from "@/components/ui/button";
@@ -6,7 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Shield, Share2, QrCode, Copy, Eye, Clock, Trash2, Plus } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { format, differenceInDays, parseISO } from 'date-fns';
+import { format, differenceInDays, parseISO, isValid } from 'date-fns';
 import QRCodeGenerator from "@/components/QRCodeGenerator";
 import { useLocalStorage } from "@/hooks/useLocalStorage";
 
@@ -27,6 +26,17 @@ const SharedLinks = () => {
   const [qrCodeModal, setQrCodeModal] = useState({ isOpen: false, shareUrl: '', licenseNumber: '' });
   const navigate = useNavigate();
   const { toast } = useToast();
+
+  const safeParseDate = (dateString: string) => {
+    if (!dateString || typeof dateString !== 'string') return null;
+    const parsed = parseISO(dateString);
+    return isValid(parsed) ? parsed : null;
+  };
+
+  const safeFormatDate = (dateString: string, formatStr: string = 'MMM dd, yyyy') => {
+    const date = safeParseDate(dateString);
+    return date ? format(date, formatStr) : 'Invalid Date';
+  };
 
   const generateShareLink = (licenseId: string, expiryHours: number = 24, maxAccess?: number) => {
     const license = licenses.find(l => l.id === licenseId);
@@ -91,18 +101,19 @@ const SharedLinks = () => {
   };
 
   const getExpiryStatus = (expiresAt: string) => {
-    if (!expiresAt) {
+    const expiryDate = safeParseDate(expiresAt);
+    if (!expiryDate) {
       return { status: 'unknown', color: 'destructive', text: 'Invalid Date' };
     }
     
     try {
-      const days = differenceInDays(parseISO(expiresAt), new Date());
+      const days = differenceInDays(expiryDate, new Date());
       if (days < 0) return { status: 'expired', color: 'destructive', text: 'Expired' };
       if (days === 0) return { status: 'today', color: 'default', text: 'Expires today' };
       if (days <= 1) return { status: 'soon', color: 'secondary', text: `${days} day left` };
       return { status: 'active', color: 'default', text: `${days} days left` };
     } catch (error) {
-      console.error('Error parsing date:', expiresAt, error);
+      console.error('Error calculating expiry status:', expiresAt, error);
       return { status: 'unknown', color: 'destructive', text: 'Invalid Date' };
     }
   };
@@ -118,16 +129,6 @@ const SharedLinks = () => {
 
   const closeQRCode = () => {
     setQrCodeModal({ isOpen: false, shareUrl: '', licenseNumber: '' });
-  };
-
-  const formatDate = (dateString: string) => {
-    if (!dateString) return 'N/A';
-    try {
-      return format(parseISO(dateString), 'MMM dd, yyyy');
-    } catch (error) {
-      console.error('Error formatting date:', dateString, error);
-      return 'Invalid Date';
-    }
   };
 
   return (
@@ -179,7 +180,7 @@ const SharedLinks = () => {
                   <div key={license.id} className="border rounded-lg p-4">
                     <h3 className="font-semibold">{license.licenseNumber}</h3>
                     <p className="text-sm text-gray-600 mb-3">
-                      Expires: {formatDate(license.expiryDate)}
+                      Expires: {safeFormatDate(license.expiryDate)}
                     </p>
                     <div className="space-y-2">
                       <Button 
@@ -240,7 +241,7 @@ const SharedLinks = () => {
                           <div>
                             <h3 className="font-semibold">{link.licenseName}</h3>
                             <p className="text-sm text-gray-600">
-                              Created: {formatDate(link.createdAt)}
+                              Created: {safeFormatDate(link.createdAt)}
                             </p>
                           </div>
                           <Badge variant={color as any}>{text}</Badge>

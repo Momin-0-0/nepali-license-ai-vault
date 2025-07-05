@@ -1,5 +1,4 @@
-
-import { differenceInDays, parseISO, addDays, format } from 'date-fns';
+import { differenceInDays, parseISO, addDays, format, isValid } from 'date-fns';
 
 export interface ExpiryPrediction {
   licenseId: string;
@@ -18,23 +17,40 @@ export interface UsagePattern {
 }
 
 class ExpiryPredictionService {
+  private safeParseDate(dateString: string) {
+    if (!dateString || typeof dateString !== 'string') return null;
+    const parsed = parseISO(dateString);
+    return isValid(parsed) ? parsed : null;
+  }
+
+  private safeFormatDate(dateString: string, formatStr: string = 'yyyy-MM-dd') {
+    const date = this.safeParseDate(dateString);
+    return date ? format(date, formatStr) : '';
+  }
+
   generatePredictions(licenses: any[], usageHistory: any[] = []): ExpiryPrediction[] {
     const usagePattern = this.analyzeUsagePattern(usageHistory);
     
-    return licenses.map(license => {
-      const daysUntilExpiry = differenceInDays(parseISO(license.expiryDate), new Date());
-      const riskLevel = this.calculateRiskLevel(daysUntilExpiry, usagePattern);
-      const recommendedDate = this.calculateRecommendedRenewalDate(license.expiryDate, usagePattern);
-      
-      return {
-        licenseId: license.id,
-        daysUntilExpiry,
-        riskLevel,
-        recommendedRenewalDate: recommendedDate,
-        predictionConfidence: this.calculateConfidence(usagePattern, daysUntilExpiry),
-        aiInsights: this.generateInsights(license, usagePattern, daysUntilExpiry)
-      };
-    });
+    return licenses
+      .filter(license => this.safeParseDate(license.expiryDate)) // Only process licenses with valid dates
+      .map(license => {
+        const expiryDate = this.safeParseDate(license.expiryDate);
+        if (!expiryDate) return null; // This shouldn't happen due to filter above, but safety check
+        
+        const daysUntilExpiry = differenceInDays(expiryDate, new Date());
+        const riskLevel = this.calculateRiskLevel(daysUntilExpiry, usagePattern);
+        const recommendedDate = this.calculateRecommendedRenewalDate(license.expiryDate, usagePattern);
+        
+        return {
+          licenseId: license.id,
+          daysUntilExpiry,
+          riskLevel,
+          recommendedRenewalDate: recommendedDate,
+          predictionConfidence: this.calculateConfidence(usagePattern, daysUntilExpiry),
+          aiInsights: this.generateInsights(license, usagePattern, daysUntilExpiry)
+        };
+      })
+      .filter(Boolean) as ExpiryPrediction[]; // Remove any null values
   }
 
   private analyzeUsagePattern(history: any[]): UsagePattern {
@@ -57,13 +73,15 @@ class ExpiryPredictionService {
   }
 
   private calculateRecommendedRenewalDate(expiryDate: string, pattern: UsagePattern): string {
-    const expiry = parseISO(expiryDate);
+    const expiry = this.safeParseDate(expiryDate);
+    if (!expiry) return '';
+    
     const recommendedDays = Math.max(
       pattern.averageProcessingTime + pattern.averageRenewalDelay + 7, // Buffer
       30 // Minimum 30 days before
     );
     
-    return format(addDays(expiry, -recommendedDays), 'yyyy-MM-dd');
+    return this.safeFormatDate(addDays(expiry, -recommendedDays).toISOString());
   }
 
   private calculateConfidence(pattern: UsagePattern, daysUntilExpiry: number): number {

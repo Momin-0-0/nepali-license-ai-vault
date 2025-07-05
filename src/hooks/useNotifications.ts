@@ -1,6 +1,5 @@
-
 import { useState, useEffect } from 'react';
-import { differenceInDays, parseISO } from 'date-fns';
+import { differenceInDays, parseISO, isValid } from 'date-fns';
 
 interface License {
   id: string;
@@ -19,6 +18,12 @@ interface Reminder {
 export const useNotifications = () => {
   const [permission, setPermission] = useState<NotificationPermission>('default');
   const [isSupported, setIsSupported] = useState(false);
+
+  const safeParseDate = (dateString: string) => {
+    if (!dateString || typeof dateString !== 'string') return null;
+    const parsed = parseISO(dateString);
+    return isValid(parsed) ? parsed : null;
+  };
 
   useEffect(() => {
     setIsSupported('Notification' in window);
@@ -61,7 +66,10 @@ export const useNotifications = () => {
     const today = new Date();
     
     licenses.forEach(license => {
-      const daysUntilExpiry = differenceInDays(parseISO(license.expiryDate), today);
+      const expiryDate = safeParseDate(license.expiryDate);
+      if (!expiryDate) return; // Skip invalid dates
+      
+      const daysUntilExpiry = differenceInDays(expiryDate, today);
       
       // Check for automatic reminders
       if (daysUntilExpiry === 30 || daysUntilExpiry === 7 || daysUntilExpiry === 1) {
@@ -77,7 +85,9 @@ export const useNotifications = () => {
     reminders.forEach(reminder => {
       if (!reminder.isActive) return;
       
-      const reminderDate = parseISO(reminder.reminderDate);
+      const reminderDate = safeParseDate(reminder.reminderDate);
+      if (!reminderDate) return; // Skip invalid dates
+      
       const timeDiff = reminderDate.getTime() - today.getTime();
       
       // Show reminder if it's within 1 hour of the reminder time

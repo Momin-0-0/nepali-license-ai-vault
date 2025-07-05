@@ -21,7 +21,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { format, differenceInDays, parseISO } from 'date-fns';
+import { format, differenceInDays, parseISO, isValid } from 'date-fns';
 
 interface License {
   id: string;
@@ -54,8 +54,24 @@ const LicenseCard = ({
 }: LicenseCardProps) => {
   const [imageError, setImageError] = useState(false);
 
+  const safeParseDate = (dateString: string) => {
+    if (!dateString || typeof dateString !== 'string') return null;
+    const parsed = parseISO(dateString);
+    return isValid(parsed) ? parsed : null;
+  };
+
+  const safeFormatDate = (dateString: string, formatStr: string = 'MMM dd, yyyy') => {
+    const date = safeParseDate(dateString);
+    return date ? format(date, formatStr) : 'Invalid Date';
+  };
+
   const getExpiryStatus = (expiryDate: string) => {
-    const days = differenceInDays(parseISO(expiryDate), new Date());
+    const expiryDateParsed = safeParseDate(expiryDate);
+    if (!expiryDateParsed) {
+      return { status: 'unknown', color: 'destructive', label: 'Invalid Date' };
+    }
+
+    const days = differenceInDays(expiryDateParsed, new Date());
     if (days < 0) return { status: 'expired', color: 'destructive', label: 'Expired' };
     if (days <= 7) return { status: 'critical', color: 'destructive', label: 'Expires Soon' };
     if (days <= 30) return { status: 'warning', color: 'secondary', label: 'Expires This Month' };
@@ -63,7 +79,13 @@ const LicenseCard = ({
   };
 
   const { color, label } = getExpiryStatus(license.expiryDate);
-  const daysLeft = differenceInDays(parseISO(license.expiryDate), new Date());
+  
+  const getDaysLeft = (expiryDate: string) => {
+    const expiryDateParsed = safeParseDate(expiryDate);
+    return expiryDateParsed ? differenceInDays(expiryDateParsed, new Date()) : null;
+  };
+
+  const daysLeft = getDaysLeft(license.expiryDate);
 
   const handleImageError = () => {
     setImageError(true);
@@ -170,15 +192,15 @@ const LicenseCard = ({
                 <Calendar className="w-3 h-3 text-gray-400" />
                 <div>
                   <p className="text-xs text-gray-500">Issue Date</p>
-                  <p className="text-sm font-medium">{format(parseISO(license.issueDate), 'MMM dd, yyyy')}</p>
+                  <p className="text-sm font-medium">{safeFormatDate(license.issueDate)}</p>
                 </div>
               </div>
               <div className="flex items-center gap-2">
                 <Calendar className="w-3 h-3 text-gray-400" />
                 <div>
                   <p className="text-xs text-gray-500">Expires</p>
-                  <p className="text-sm font-medium">{format(parseISO(license.expiryDate), 'MMM dd, yyyy')}</p>
-                  {daysLeft >= 0 && (
+                  <p className="text-sm font-medium">{safeFormatDate(license.expiryDate)}</p>
+                  {daysLeft !== null && daysLeft >= 0 && (
                     <p className="text-xs text-gray-500">{daysLeft} days left</p>
                   )}
                 </div>
@@ -196,7 +218,7 @@ const LicenseCard = ({
             )}
 
             {/* Status indicator */}
-            {daysLeft < 0 && (
+            {daysLeft !== null && daysLeft < 0 && (
               <div className="flex items-center justify-center p-2 bg-red-50 rounded-lg">
                 <p className="text-sm font-medium text-red-600">License Expired</p>
               </div>

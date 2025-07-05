@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -17,7 +16,7 @@ import {
   X,
   Settings
 } from "lucide-react";
-import { format, differenceInDays, parseISO } from 'date-fns';
+import { format, differenceInDays, parseISO, isValid } from 'date-fns';
 
 interface Notification {
   id: string;
@@ -37,19 +36,40 @@ const NotificationCenter = ({ licenses }: NotificationCenterProps) => {
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [isOpen, setIsOpen] = useState(false);
 
+  const safeParseDate = (dateString: string) => {
+    if (!dateString || typeof dateString !== 'string') return null;
+    const parsed = parseISO(dateString);
+    return isValid(parsed) ? parsed : null;
+  };
+
+  const safeFormatDate = (dateString: string, formatStr: string = 'MMM dd, yyyy') => {
+    const date = safeParseDate(dateString);
+    return date ? format(date, formatStr) : 'Invalid Date';
+  };
+
+  const getDaysUntilExpiry = (expiryDate: string) => {
+    const date = safeParseDate(expiryDate);
+    return date ? differenceInDays(date, new Date()) : null;
+  };
+
   useEffect(() => {
     // Generate notifications based on license status
     const newNotifications: Notification[] = [];
 
     licenses.forEach(license => {
-      const daysLeft = differenceInDays(parseISO(license.expiryDate), new Date());
+      const daysLeft = getDaysUntilExpiry(license.expiryDate);
+      
+      if (daysLeft === null) {
+        // Skip licenses with invalid dates
+        return;
+      }
       
       if (daysLeft < 0) {
         newNotifications.push({
           id: `expired-${license.id}`,
           type: 'error',
           title: 'License Expired',
-          message: `License ${license.licenseNumber} expired on ${format(parseISO(license.expiryDate), 'MMM dd, yyyy')}`,
+          message: `License ${license.licenseNumber} expired on ${safeFormatDate(license.expiryDate)}`,
           timestamp: new Date().toISOString(),
           read: false,
           licenseId: license.id
@@ -69,7 +89,7 @@ const NotificationCenter = ({ licenses }: NotificationCenterProps) => {
           id: `warning-${license.id}`,
           type: 'warning',
           title: 'Renewal Reminder',
-          message: `License ${license.licenseNumber} expires on ${format(parseISO(license.expiryDate), 'MMM dd, yyyy')}`,
+          message: `License ${license.licenseNumber} expires on ${safeFormatDate(license.expiryDate)}`,
           timestamp: new Date().toISOString(),
           read: false,
           licenseId: license.id
@@ -132,6 +152,11 @@ const NotificationCenter = ({ licenses }: NotificationCenterProps) => {
       default:
         return 'border-l-blue-400 bg-blue-50';
     }
+  };
+
+  const safeFormatTimestamp = (timestamp: string) => {
+    const date = safeParseDate(timestamp);
+    return date ? format(date, 'MMM dd, h:mm a') : 'Invalid Date';
   };
 
   return (
@@ -201,7 +226,7 @@ const NotificationCenter = ({ licenses }: NotificationCenterProps) => {
                             {notification.message}
                           </p>
                           <p className="text-xs text-gray-400 mt-2">
-                            {format(parseISO(notification.timestamp), 'MMM dd, h:mm a')}
+                            {safeFormatTimestamp(notification.timestamp)}
                           </p>
                         </div>
                       </div>
