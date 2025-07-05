@@ -1,3 +1,4 @@
+
 import React, { useState, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -41,7 +42,6 @@ const BatchProcessor: React.FC<BatchProcessorProps> = ({
   const [isProcessing, setIsProcessing] = useState(false);
   const [currentProcessing, setCurrentProcessing] = useState<string | null>(null);
   const [showVerificationModal, setShowVerificationModal] = useState(false);
-  const [processedItems, setProcessedItems] = useState<BatchItem[]>([]);
   const { toast } = useToast();
 
   const handleFileSelection = useCallback((files: FileList) => {
@@ -106,7 +106,6 @@ const BatchProcessor: React.FC<BatchProcessorProps> = ({
 
     setCurrentProcessing(null);
     setIsProcessing(false);
-    setProcessedItems(results);
     
     // Show verification modal for successful items
     const successfulItems = results.filter(item => item.status === 'verifying');
@@ -126,9 +125,15 @@ const BatchProcessor: React.FC<BatchProcessorProps> = ({
   }, [batchItems, toast]);
 
   const handleVerificationComplete = (verifiedItems: BatchItem[]) => {
-    setBatchItems(verifiedItems);
+    // Update the batch items with the verified results
+    const updatedItems = batchItems.map(item => {
+      const verifiedItem = verifiedItems.find(v => v.id === item.id);
+      return verifiedItem || item;
+    });
+    
+    setBatchItems(updatedItems);
     setShowVerificationModal(false);
-    onBatchComplete(verifiedItems);
+    onBatchComplete(updatedItems);
     
     const successCount = verifiedItems.filter(item => item.status === 'completed').length;
     toast({
@@ -162,6 +167,7 @@ const BatchProcessor: React.FC<BatchProcessorProps> = ({
     : 0;
 
   const verifyingCount = batchItems.filter(item => item.status === 'verifying').length;
+  const verifyingItems = batchItems.filter(item => item.status === 'verifying');
 
   return (
     <>
@@ -342,7 +348,7 @@ const BatchProcessor: React.FC<BatchProcessorProps> = ({
       <BatchVerificationModal
         isOpen={showVerificationModal}
         onClose={() => setShowVerificationModal(false)}
-        batchItems={processedItems.filter(item => item.status === 'verifying')}
+        batchItems={verifyingItems}
         onVerificationComplete={handleVerificationComplete}
       />
     </>
