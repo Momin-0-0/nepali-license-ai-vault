@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Search, FileText, User, Calendar, MapPin } from 'lucide-react';
 import {
@@ -12,7 +11,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { useNavigate } from 'react-router-dom';
-import { format, parseISO } from 'date-fns';
+import { format, parseISO, isValid } from 'date-fns';
 
 interface GlobalSearchProps {
   licenses: any[];
@@ -39,8 +38,27 @@ const GlobalSearch = ({ licenses }: GlobalSearchProps) => {
     navigate('/all-licenses', { state: { selectedLicense: license.id } });
   };
 
+  const safeParseDate = (dateString: string): Date | null => {
+    if (!dateString || typeof dateString !== 'string') {
+      return null;
+    }
+    
+    try {
+      const parsedDate = parseISO(dateString);
+      return isValid(parsedDate) ? parsedDate : null;
+    } catch {
+      return null;
+    }
+  };
+
   const getStatusBadge = (expiryDate: string) => {
-    const daysUntilExpiry = Math.ceil((new Date(expiryDate).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24));
+    const parsedDate = safeParseDate(expiryDate);
+    
+    if (!parsedDate) {
+      return <Badge variant="secondary" className="text-xs bg-gray-100 text-gray-600">Invalid Date</Badge>;
+    }
+
+    const daysUntilExpiry = Math.ceil((parsedDate.getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24));
     
     if (daysUntilExpiry < 0) {
       return <Badge variant="destructive" className="text-xs">Expired</Badge>;
@@ -48,6 +66,20 @@ const GlobalSearch = ({ licenses }: GlobalSearchProps) => {
       return <Badge variant="secondary" className="text-xs bg-orange-100 text-orange-800">Expiring</Badge>;
     }
     return <Badge variant="secondary" className="text-xs bg-green-100 text-green-800">Valid</Badge>;
+  };
+
+  const formatExpiryDate = (expiryDate: string): string => {
+    const parsedDate = safeParseDate(expiryDate);
+    
+    if (!parsedDate) {
+      return 'Invalid Date';
+    }
+    
+    try {
+      return format(parsedDate, 'MMM dd, yyyy');
+    } catch {
+      return 'Invalid Date';
+    }
   };
 
   return (
@@ -95,7 +127,7 @@ const GlobalSearch = ({ licenses }: GlobalSearchProps) => {
                       )}
                       <div className="flex items-center gap-1 text-xs text-gray-400">
                         <Calendar className="w-3 h-3" />
-                        Expires: {format(parseISO(license.expiryDate), 'MMM dd, yyyy')}
+                        Expires: {formatExpiryDate(license.expiryDate)}
                       </div>
                     </div>
                   </div>
