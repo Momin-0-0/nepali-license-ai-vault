@@ -19,7 +19,7 @@ interface License {
 const SharedLicense = () => {
   const { shareToken } = useParams();
   const [license, setLicense] = useState<License | null>(null);
-  const [isValid, setIsValid] = useState(false);
+  const [isValidLicense, setIsValidLicense] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
@@ -77,7 +77,7 @@ const SharedLicense = () => {
         localStorage.setItem('sharedLinks', JSON.stringify(sharedLinks));
 
         setLicense(licenseData);
-        setIsValid(true);
+        setIsValidLicense(true);
         setLoading(false);
       } catch (error) {
         setError('Failed to load license information');
