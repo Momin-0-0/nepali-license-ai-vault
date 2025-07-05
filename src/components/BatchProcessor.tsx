@@ -1,4 +1,3 @@
-
 import React, { useState, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -85,12 +84,15 @@ const BatchProcessor: React.FC<BatchProcessorProps> = ({
         // Process with OCR
         const extractedData = await processImageWithOCR(item.file);
         
+        // Set to verifying status after successful OCR
         results[i] = {
           ...item,
           status: 'verifying',
           progress: 100,
           extractedData
         };
+
+        console.log('Item processed and set to verifying:', results[i]);
 
       } catch (error) {
         results[i] = {
@@ -109,7 +111,10 @@ const BatchProcessor: React.FC<BatchProcessorProps> = ({
     
     // Show verification modal for successful items
     const successfulItems = results.filter(item => item.status === 'verifying');
+    console.log('Items ready for verification:', successfulItems);
+    
     if (successfulItems.length > 0) {
+      // Automatically open verification modal
       setShowVerificationModal(true);
       toast({
         title: "OCR Processing Complete",
@@ -142,6 +147,20 @@ const BatchProcessor: React.FC<BatchProcessorProps> = ({
     });
   };
 
+  const openVerificationModal = () => {
+    const verifyingItems = batchItems.filter(item => item.status === 'verifying');
+    console.log('Opening verification modal with items:', verifyingItems);
+    if (verifyingItems.length > 0) {
+      setShowVerificationModal(true);
+    } else {
+      toast({
+        title: "No Items to Verify",
+        description: "Process some licenses first before verification",
+        variant: "destructive"
+      });
+    }
+  };
+
   const clearBatch = useCallback(() => {
     setBatchItems([]);
     setCurrentProcessing(null);
@@ -168,6 +187,9 @@ const BatchProcessor: React.FC<BatchProcessorProps> = ({
 
   const verifyingCount = batchItems.filter(item => item.status === 'verifying').length;
   const verifyingItems = batchItems.filter(item => item.status === 'verifying');
+
+  console.log('Current verifying count:', verifyingCount);
+  console.log('Show verification modal state:', showVerificationModal);
 
   return (
     <>
@@ -237,7 +259,7 @@ const BatchProcessor: React.FC<BatchProcessorProps> = ({
                 
                 {verifyingCount > 0 && (
                   <Button 
-                    onClick={() => setShowVerificationModal(true)}
+                    onClick={openVerificationModal}
                     className="bg-yellow-600 hover:bg-yellow-700"
                   >
                     <Eye className="w-4 h-4 mr-2" />
@@ -285,9 +307,19 @@ const BatchProcessor: React.FC<BatchProcessorProps> = ({
                     )}
                     
                     {item.status === 'verifying' && (
-                      <Badge variant="outline" className="text-yellow-600">
-                        Needs Verification
-                      </Badge>
+                      <div className="flex items-center gap-2">
+                        <Badge variant="outline" className="text-yellow-600">
+                          Needs Verification
+                        </Badge>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={openVerificationModal}
+                          className="text-xs"
+                        >
+                          Review
+                        </Button>
+                      </div>
                     )}
                     
                     {item.status === 'completed' && item.extractedData && (
