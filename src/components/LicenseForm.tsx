@@ -43,16 +43,47 @@ const LicenseForm = ({
 
   const updateField = (field: keyof LicenseData, value: string | undefined) => {
     const sanitizedValue = value ? sanitizeInput(value) : '';
-    onDataChange({
-      ...licenseData,
-      [field]: field === 'bloodGroup' ? (value as LicenseData['bloodGroup']) : sanitizedValue
-    });
+    
+    // Handle blood group specifically to ensure it's a valid enum value or undefined
+    if (field === 'bloodGroup') {
+      const validBloodGroups = ['A+', 'A-', 'B+', 'B-', 'O+', 'O-', 'AB+', 'AB-'];
+      const bloodGroupValue = validBloodGroups.includes(value as string) ? value as LicenseData['bloodGroup'] : undefined;
+      
+      onDataChange({
+        ...licenseData,
+        [field]: bloodGroupValue
+      });
+    } else {
+      onDataChange({
+        ...licenseData,
+        [field]: sanitizedValue
+      });
+    }
     
     updateVerificationAfterEdit(field);
   };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Clean up the license data before validation
+    const cleanedData = {
+      ...licenseData,
+      // Ensure blood group is properly typed
+      bloodGroup: licenseData.bloodGroup && typeof licenseData.bloodGroup === 'string' 
+        ? licenseData.bloodGroup as LicenseData['bloodGroup']
+        : undefined,
+      // Clean up any undefined or null values
+      licenseNumber: licenseData.licenseNumber || '',
+      holderName: licenseData.holderName || '',
+      address: licenseData.address || '',
+      issueDate: licenseData.issueDate || '',
+      expiryDate: licenseData.expiryDate || '',
+      issuingAuthority: licenseData.issuingAuthority || 'Department of Transport Management, Government of Nepal'
+    };
+
+    // Update the parent with cleaned data
+    onDataChange(cleanedData);
     
     const isValid = validateRequiredFields();
     if (!isValid) {
