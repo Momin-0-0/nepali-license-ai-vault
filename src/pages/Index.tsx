@@ -1,9 +1,8 @@
-
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Shield, FileText, Bell, Share2, Smartphone, Cloud, Menu, X, ChevronRight, Star, Users, CheckCircle } from "lucide-react";
+import { Shield, FileText, Bell, Share2, Smartphone, Cloud, Menu, X, ChevronRight, Star, Users, CheckCircle, Zap, Brain, Monitor } from "lucide-react";
 
 const Index = () => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -84,6 +83,9 @@ const Index = () => {
                 )}
               </button>
             ))}
+            <Link to="/demo-presentation" className="text-gray-600 hover:text-blue-600 transition-colors font-medium">
+              Demo
+            </Link>
             <Link to="/login" className="text-gray-600 hover:text-blue-600 transition-colors font-medium">
               Login
             </Link>
@@ -118,6 +120,9 @@ const Index = () => {
                   {item.label}
                 </button>
               ))}
+              <Link to="/demo-presentation" className="text-gray-600 hover:text-blue-600 transition-colors font-medium py-2">
+                Demo
+              </Link>
               <Link to="/login" className="text-gray-600 hover:text-blue-600 transition-colors font-medium py-2">
                 Login
               </Link>
@@ -157,9 +162,30 @@ const Index = () => {
                 <ChevronRight className="ml-2 w-5 h-5" />
               </Button>
             </Link>
-            <Link to="/loading-demo">
+            <Link to="/demo-presentation">
               <Button variant="outline" size="lg" className="text-lg px-10 py-7 border-2 hover:bg-gray-50 shadow-lg hover:shadow-xl transition-all duration-300 rounded-xl font-semibold">
-                Watch Demo
+                <Monitor className="w-5 h-5 mr-2" />
+                Interactive Demo
+              </Button>
+            </Link>
+          </div>
+
+          {/* New Demo Highlight */}
+          <div className="bg-gradient-to-r from-purple-50 to-blue-50 border border-purple-200 rounded-xl p-6 mb-8">
+            <div className="flex items-center justify-center gap-3 mb-4">
+              <Brain className="w-8 h-8 text-purple-600" />
+              <Zap className="w-6 h-6 text-yellow-500" />
+              <Monitor className="w-6 h-6 text-blue-600" />
+            </div>
+            <h3 className="text-2xl font-bold text-purple-800 mb-2">
+              New: Interactive AI Demo
+            </h3>
+            <p className="text-purple-700 mb-4">
+              Experience our advanced OCR technology with a live demonstration perfect for presentations and showcases
+            </p>
+            <Link to="/demo-presentation">
+              <Button className="bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700">
+                Try Interactive Demo
               </Button>
             </Link>
           </div>
@@ -309,9 +335,10 @@ const Index = () => {
                 <ChevronRight className="ml-2 w-5 h-5" />
               </Button>
             </Link>
-            <Link to="/loading-demo">
+            <Link to="/demo-presentation">
               <Button size="lg" variant="outline" className="text-lg px-10 py-7 border-2 border-white text-white hover:bg-white hover:text-gray-900 shadow-xl hover:shadow-2xl transition-all duration-300 rounded-xl font-semibold">
-                Watch Demo
+                <Monitor className="w-5 h-5 mr-2" />
+                Interactive Demo
               </Button>
             </Link>
           </div>
@@ -353,7 +380,7 @@ const Index = () => {
               <h5 className="font-bold text-lg mb-6">Product</h5>
               <ul className="space-y-4 text-gray-400">
                 <li><button onClick={() => scrollToSection('features')} className="hover:text-white transition-colors">Features</button></li>
-                <li><Link to="/loading-demo" className="hover:text-white transition-colors">Demo</Link></li>
+                <li><Link to="/demo-presentation" className="hover:text-white transition-colors">Interactive Demo</Link></li>
                 <li><a href="#" className="hover:text-white transition-colors">Security</a></li>
               </ul>
             </div>

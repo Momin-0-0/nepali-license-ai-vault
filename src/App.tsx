@@ -19,6 +19,8 @@ import Profile from "./pages/Profile";
 import Settings from "./pages/Settings";
 import Analytics from "./pages/Analytics";
 import LoadingDemo from "./pages/LoadingDemo";
+import BatchUpload from "./pages/BatchUpload";
+import DemoPresentation from "./pages/DemoPresentation";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient({
@@ -59,6 +61,7 @@ const App = () => (
                 <Route path="/signup" element={<Signup />} />
                 <Route path="/dashboard" element={<Dashboard />} />
                 <Route path="/upload" element={<Upload />} />
+                <Route path="/batch-upload" element={<BatchUpload />} />
                 <Route path="/shared-links" element={<SharedLinks />} />
                 <Route path="/shared/:shareToken" element={<SharedLicense />} />
                 <Route path="/all-licenses" element={<AllLicenses />} />
@@ -66,6 +69,7 @@ const App = () => (
                 <Route path="/settings" element={<Settings />} />
                 <Route path="/analytics" element={<Analytics />} />
                 <Route path="/loading-demo" element={<LoadingDemo />} />
+                <Route path="/demo-presentation" element={<DemoPresentation />} />
                 {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
                 <Route path="*" element={<NotFound />} />
               </Routes>

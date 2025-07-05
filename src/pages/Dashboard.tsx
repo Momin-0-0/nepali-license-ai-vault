@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Bell, Share2, FileText, Plus } from "lucide-react";
+import { Bell, Share2, FileText, Plus, Zap, BarChart3 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { format, differenceInDays, parseISO } from 'date-fns';
 import RemindersModal from "@/components/RemindersModal";
@@ -142,13 +142,19 @@ const Dashboard = () => {
         </div>
 
         {/* Quick Actions */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 mb-8">
           <QuickActionCard
             title="Upload License"
             description="Add a new license"
             icon={Plus}
             onClick={() => navigate('/upload')}
             variant="primary"
+          />
+          <QuickActionCard
+            title="Batch Processing"
+            description="Upload multiple licenses"
+            icon={Zap}
+            onClick={() => navigate('/batch-upload')}
           />
           <QuickActionCard
             title="Reminders"
@@ -163,10 +169,10 @@ const Dashboard = () => {
             onClick={() => navigate('/shared-links')}
           />
           <QuickActionCard
-            title="All Licenses"
-            description="Browse all licenses"
-            icon={FileText}
-            onClick={() => navigate('/all-licenses')}
+            title="Analytics"
+            description="View insights"
+            icon={BarChart3}
+            onClick={() => navigate('/analytics')}
           />
         </div>
 
@@ -221,10 +227,16 @@ const Dashboard = () => {
                       Manage all your driving licenses ({licenses.length} total)
                     </CardDescription>
                   </div>
-                  <Button onClick={() => navigate('/upload')} className="bg-gradient-to-r from-blue-600 to-green-600 hover:from-blue-700 hover:to-green-700">
-                    <Plus className="w-4 h-4 mr-2" />
-                    Add License
-                  </Button>
+                  <div className="flex gap-2">
+                    <Button onClick={() => navigate('/batch-upload')} variant="outline" className="bg-gradient-to-r from-purple-50 to-blue-50 border-purple-200 text-purple-700 hover:bg-purple-100">
+                      <Zap className="w-4 h-4 mr-2" />
+                      Batch Upload
+                    </Button>
+                    <Button onClick={() => navigate('/upload')} className="bg-gradient-to-r from-blue-600 to-green-600 hover:from-blue-700 hover:to-green-700">
+                      <Plus className="w-4 h-4 mr-2" />
+                      Add License
+                    </Button>
+                  </div>
                 </div>
               </CardHeader>
               <CardContent>
@@ -267,8 +279,6 @@ const Dashboard = () => {
 
           {/* Sidebar */}
           <div className="space-y-6">
-            {/* Quick Stats - moved to top as DashboardStats component */}
-            
             {/* Recent Activity */}
             <Card>
               <CardHeader>
@@ -301,6 +311,7 @@ const Dashboard = () => {
               </CardHeader>
               <CardContent className="text-sm space-y-2">
                 <p className="text-indigo-700">• Upload clear, well-lit license images for better OCR accuracy</p>
+                <p className="text-indigo-700">• Use batch processing for multiple licenses</p>
                 <p className="text-indigo-700">• Set up renewal reminders 60 days before expiry</p>
                 <p className="text-indigo-700">• Use shared links to provide temporary access</p>
                 <p className="text-indigo-700">• Keep digital backups of all your important documents</p>
