@@ -8,7 +8,10 @@ export const createOCRWorker = () => {
       const { imageData, config, taskId } = e.data;
       
       try {
-        const worker = await Tesseract.createWorker(['eng', 'nep']);
+        const worker = await Tesseract.createWorker(['eng'], {
+          langPath: '/tessdata/',
+          logger: m => console.log(m)
+        });
         await worker.setParameters(config.params);
         
         const { data } = await worker.recognize(imageData);

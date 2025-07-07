@@ -171,7 +171,14 @@ const Upload = () => {
     if (uploadedImage) {
       fetch(uploadedImage)
         .then(r => r.blob())
-        .then(blob => handleImageUpload(blob as File));
+        .then(blob => {
+          // Create a proper File object from the blob
+          const file = new File([blob], 'retry-image.png', { 
+            type: blob.type || 'image/png',
+            lastModified: Date.now()
+          });
+          handleImageUpload(file);
+        });
     }
   }, [uploadedImage, handleImageUpload]);
 

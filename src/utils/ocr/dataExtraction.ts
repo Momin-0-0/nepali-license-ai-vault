@@ -1,6 +1,6 @@
 import { LicenseData } from '@/types/license';
-import { NEPAL_LICENSE_PATTERNS } from './patterns';
 import { WordData, LineData } from './types';
+import { validateLicenseData } from '@/utils/dataValidation';
 
 export const extractWithAdvancedPatterns = (text: string): Partial<LicenseData> => {
   const data: Partial<LicenseData> = {};
@@ -514,17 +514,6 @@ export const extractFromWordPositions = (words: WordData[]): Partial<LicenseData
   return data;
 };
 
-export const validateNepalLicenseNumber = (licenseNumber: string): boolean => {
-  const patterns = [
-    /^\d{2}-\d{3}-\d{6}$/,
-    /^\d{2}-\d{2}-\d{8}$/,
-    /^\d{2}-\d{3}-\d{7}$/,
-    /^\d{11,12}$/
-  ];
-  
-  return patterns.some(pattern => pattern.test(licenseNumber));
-};
-
 export const formatNepalLicenseNumber = (licenseNumber: string): string => {
   const cleaned = licenseNumber.replace(/[-\s]/g, '');
   
@@ -535,6 +524,17 @@ export const formatNepalLicenseNumber = (licenseNumber: string): string => {
   }
   
   return licenseNumber;
+};
+
+export const validateNepalLicenseNumber = (licenseNumber: string): boolean => {
+  const patterns = [
+    /^\d{2}-\d{3}-\d{6}$/,
+    /^\d{2}-\d{2}-\d{8}$/,
+    /^\d{2}-\d{3}-\d{7}$/,
+    /^\d{11,12}$/
+  ];
+  
+  return patterns.some(pattern => pattern.test(licenseNumber));
 };
 
 export const convertNepalDateToISO = (dateString: string): string => {

@@ -1,8 +1,8 @@
 
 import { useState, useEffect } from 'react';
 import { LicenseData } from '@/types/license';
-import { validateNepalLicenseNumber, validateNepalDate, validateExpiryDate } from '@/utils/validation/nepalLicenseValidator';
-import { sanitizeInput } from '@/utils/validation';
+import { validateLicenseData } from '@/utils/dataValidation';
+import { z } from 'zod';
 
 export interface ValidationState {
   errors: Record<string, string[]>;
@@ -16,6 +16,13 @@ export const useLicenseFormValidation = (licenseData: LicenseData) => {
   const [touched, setTouched] = useState<Record<string, boolean>>({});
   const [autoFilledFields, setAutoFilledFields] = useState<Record<string, boolean>>({});
   const [verificationStatus, setVerificationStatus] = useState<Record<string, 'pending' | 'verified' | 'corrected'>>({});
+
+  const sanitizeInput = (input: string): string => {
+    return input
+      .trim()
+      .replace(/[<>\"'&]/g, '') // Remove potentially dangerous characters
+      .replace(/\s+/g, ' '); // Normalize whitespace
+  };
 
   const getFieldValue = (field: keyof LicenseData): string => {
     const value = licenseData[field];
@@ -56,45 +63,55 @@ export const useLicenseFormValidation = (licenseData: LicenseData) => {
 
   const validateField = (field: keyof LicenseData, value: string | undefined): boolean => {
     let fieldErrors: string[] = [];
-    let warnings: string[] = [];
 
     switch (field) {
       case 'licenseNumber':
         if (value) {
-          const result = validateNepalLicenseNumber(value);
-          fieldErrors = result.errors;
-          if (result.warnings.length > 0) {
-            console.warn(`License number warnings:`, result.warnings);
+          try {
+            // Validate using zod schema from dataValidation
+            const licenseSchema = z.string().regex(
+              /^\d{2}-\d{2,3}-\d{6,9}$/,
+              'Invalid Nepal license format. Expected: XX-XXX-XXXXXX'
+            );
+            licenseSchema.parse(value);
+          } catch (error) {
+            if (error instanceof z.ZodError) {
+              fieldErrors = error.errors.map(e => e.message);
+            }
           }
         }
         break;
       
       case 'issueDate':
-        if (value) {
-          const result = validateNepalDate(value, 'Issue date');
-          fieldErrors = result.errors;
-          warnings = result.warnings;
-        }
-        break;
-      
       case 'expiryDate':
-        if (value) {
-          const dateResult = validateNepalDate(value, 'Expiry date');
-          fieldErrors = dateResult.errors;
-          
-          if (dateResult.isValid && licenseData.issueDate) {
-            const rangeResult = validateExpiryDate(licenseData.issueDate, value);
-            fieldErrors = [...fieldErrors, ...rangeResult.errors];
-            warnings = [...warnings, ...rangeResult.warnings];
-          }
-        }
-        break;
-      
       case 'dateOfBirth':
         if (value) {
-          const result = validateNepalDate(value, 'Date of birth');
-          fieldErrors = result.errors;
-          warnings = result.warnings;
+          try {
+            const dateSchema = z.string().regex(
+              /^\d{4}-\d{2}-\d{2}$/,
+              'Date must be in YYYY-MM-DD format'
+            );
+            dateSchema.parse(value);
+            
+            // Additional date validation
+            const date = new Date(value);
+            if (isNaN(date.getTime())) {
+              fieldErrors.push('Invalid date');
+            }
+          } catch (error) {
+            if (error instanceof z.ZodError) {
+              fieldErrors = error.errors.map(e => e.message);
+            }
+          }
+          
+          // Validate expiry date is after issue date
+          if (field === 'expiryDate' && licenseData.issueDate && value) {
+            const issueDate = new Date(licenseData.issueDate);
+            const expiryDate = new Date(value);
+            if (expiryDate <= issueDate) {
+              fieldErrors.push('Expiry date must be after issue date');
+            }
+          }
         }
         break;
       
@@ -106,10 +123,6 @@ export const useLicenseFormValidation = (licenseData: LicenseData) => {
           if (!/^[a-zA-Z\s.'-]+$/u.test(value)) {
             fieldErrors.push('Name can only contain letters, spaces, dots, hyphens, and apostrophes');
           }
-          // Check for common OCR errors
-          if (/\d/.test(value)) {
-            warnings.push('Name contains numbers - please verify this is correct');
-          }
         }
         break;
       
@@ -118,9 +131,6 @@ export const useLicenseFormValidation = (licenseData: LicenseData) => {
           const cleaned = value.replace(/\D/g, '');
           if (cleaned.length !== 10) {
             fieldErrors.push('Phone number must be exactly 10 digits');
-          }
-          if (cleaned.length === 10 && !cleaned.startsWith('9')) {
-            warnings.push('Nepal mobile numbers typically start with 9');
           }
         }
         break;
@@ -148,11 +158,6 @@ export const useLicenseFormValidation = (licenseData: LicenseData) => {
           fieldErrors.push('Issuing authority must be at least 3 characters');
         }
         break;
-    }
-
-    // Log warnings for user feedback
-    if (warnings.length > 0) {
-      console.warn(`Field ${field} warnings:`, warnings);
     }
 
     setErrors(prev => ({ ...prev, [field]: fieldErrors }));

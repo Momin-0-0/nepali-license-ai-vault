@@ -34,55 +34,20 @@ const AppHeader = ({
   showSearch = false,
   onSearch
 }: AppHeaderProps) => {
-  // Safely use hooks with error boundary
-  let navigate: ReturnType<typeof useNavigate>;
-  let toast: ReturnType<typeof useToast>['toast'];
-  
-  try {
-    navigate = useNavigate();
-    const toastHook = useToast();
-    toast = toastHook.toast;
-  } catch (error) {
-    console.error('Hook initialization error:', error);
-    // Fallback navigation function with correct type signature
-    navigate = ((pathOrDelta: string | number) => {
-      if (typeof pathOrDelta === 'string') {
-        window.location.href = pathOrDelta;
-      }
-      // For number delta, we can't really navigate back/forward without history API
-    }) as ReturnType<typeof useNavigate>;
-    
-    // Fallback toast function with correct return type
-    toast = (() => ({
-      id: 'fallback',
-      dismiss: () => {},
-      update: () => {}
-    })) as ReturnType<typeof useToast>['toast'];
-  }
+  const navigate = useNavigate();
+  const { toast } = useToast();
 
   const handleLogout = () => {
-    try {
-      localStorage.removeItem('user');
-      toast({
-        title: "Logged out",
-        description: "You have been logged out successfully",
-      });
-      navigate('/');
-    } catch (error) {
-      console.error('Logout error:', error);
-      // Fallback logout
-      localStorage.clear();
-      window.location.href = '/';
-    }
+    localStorage.removeItem('user');
+    toast({
+      title: "Logged out",
+      description: "You have been logged out successfully",
+    });
+    navigate('/');
   };
 
   const handleNavigation = (path: string) => {
-    try {
-      navigate(path);
-    } catch (error) {
-      console.error('Navigation error:', error);
-      window.location.href = path;
-    }
+    navigate(path);
   };
 
   return (

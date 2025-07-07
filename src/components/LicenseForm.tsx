@@ -4,7 +4,6 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Loader2, AlertCircle, CheckCircle2 } from "lucide-react";
 import { LicenseData } from '@/types/license';
-import { sanitizeInput } from '@/utils/validation';
 import { useLicenseFormValidation } from './forms/LicenseFormValidation';
 import LicenseFormHeader from './forms/LicenseFormHeader';
 import LicenseFormFields from './forms/LicenseFormFields';
@@ -42,7 +41,7 @@ const LicenseForm = ({
   } = useLicenseFormValidation(licenseData);
 
   const updateField = (field: keyof LicenseData, value: string | undefined) => {
-    const sanitizedValue = value ? sanitizeInput(value) : '';
+    const sanitizedValue = value ? value.trim().replace(/[<>\"'&]/g, '').replace(/\s+/g, ' ') : '';
     
     // Handle blood group specifically to ensure it's a valid enum value or undefined
     if (field === 'bloodGroup') {
