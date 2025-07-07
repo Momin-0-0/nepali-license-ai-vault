@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Bell, Share2, FileText, Plus, Zap, BarChart3 } from "lucide-react";
+import { Bell, Share2, FileText, Plus, Zap, BarChart3, FolderOpen } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { format, differenceInDays, parseISO } from 'date-fns';
 import RemindersModal from "@/components/RemindersModal";
@@ -173,6 +173,12 @@ const Dashboard = () => {
             description="View insights"
             icon={BarChart3}
             onClick={() => navigate('/analytics')}
+          />
+          <QuickActionCard
+            title="File Manager"
+            description="Organize files"
+            icon={FolderOpen}
+            onClick={() => navigate('/file-management')}
           />
         </div>
 
