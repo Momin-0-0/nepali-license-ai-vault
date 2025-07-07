@@ -22,6 +22,7 @@ import LoadingDemo from "./pages/LoadingDemo";
 import BatchUpload from "./pages/BatchUpload";
 import DemoPresentation from "./pages/DemoPresentation";
 import NotFound from "./pages/NotFound";
+import FileManagement from "./pages/FileManagement";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -70,6 +71,7 @@ const App = () => (
                 <Route path="/analytics" element={<Analytics />} />
                 <Route path="/loading-demo" element={<LoadingDemo />} />
                 <Route path="/demo-presentation" element={<DemoPresentation />} />
+                <Route path="/file-management" element={<FileManagement />} />
                 {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
                 <Route path="*" element={<NotFound />} />
               </Routes>
