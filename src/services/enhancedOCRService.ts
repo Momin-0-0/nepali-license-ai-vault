@@ -1,4 +1,6 @@
-import { pipeline } from '@huggingface/transformers';
+import Tesseract from 'tesseract.js';
+import { preprocessNepalLicenseImage } from '@/utils/ocr/imagePreprocessing';
+import { extractWithAdvancedPatterns, extractWithContextualAnalysis } from '@/utils/ocr/dataExtraction';
 import type { LicenseData } from '@/types/license';
 
 interface OCRResult {
@@ -8,45 +10,19 @@ interface OCRResult {
 }
 
 class EnhancedOCRService {
-  private documentQAPipeline: any = null;
-  private ocrPipeline: any = null;
-  private isInitialized = false;
+  private worker: Tesseract.Worker | null = null;
 
   async initialize() {
-    if (this.isInitialized) return;
+    if (this.worker) return;
 
-    try {
-      // Initialize document question-answering pipeline for structured data extraction
-      this.documentQAPipeline = await pipeline(
-        'document-question-answering',
-        'microsoft/layoutlm-base-uncased',
-        { device: 'webgpu' }
-      );
+    this.worker = await Tesseract.createWorker(['eng']);
 
-      // Initialize OCR pipeline for text extraction
-      this.ocrPipeline = await pipeline(
-        'image-to-text',
-        'microsoft/trocr-base-printed',
-        { device: 'webgpu' }
-      );
-
-      this.isInitialized = true;
-    } catch (error) {
-      console.warn('WebGPU not available, falling back to CPU:', error);
-      
-      // Fallback to CPU
-      this.documentQAPipeline = await pipeline(
-        'document-question-answering',
-        'microsoft/layoutlm-base-uncased'
-      );
-
-      this.ocrPipeline = await pipeline(
-        'image-to-text',
-        'microsoft/trocr-base-printed'
-      );
-
-      this.isInitialized = true;
-    }
+    // Set enhanced parameters for better Nepal license recognition
+    await this.worker.setParameters({
+      tessedit_page_seg_mode: Tesseract.PSM.SINGLE_BLOCK,
+      tessedit_char_whitelist: 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789 /-:.,',
+      preserve_interword_spaces: '1',
+    });
   }
 
   async processNepalLicense(
@@ -55,137 +31,176 @@ class EnhancedOCRService {
   ): Promise<OCRResult> {
     await this.initialize();
     
-    onProgress?.('Initializing AI models...', 10);
+    onProgress?.('Preprocessing image for better recognition...', 10);
 
-    // Convert file to image data
-    const imageUrl = URL.createObjectURL(imageFile);
-    
     try {
-      onProgress?.('Extracting text with AI OCR...', 30);
+      // Preprocess the image for better OCR results
+      const preprocessedImage = await preprocessNepalLicenseImage(imageFile);
       
-      // First, extract text using TrOCR (Transformer-based OCR)
-      const ocrResult = await this.ocrPipeline(imageUrl);
-      const extractedText = ocrResult.generated_text || '';
+      onProgress?.('Running advanced OCR analysis...', 30);
 
-      onProgress?.('Analyzing document structure...', 60);
-
-      // Use document Q&A to extract structured data
-      const questions = [
-        'What is the license number?',
-        'What is the holder name?',
-        'What is the date of birth?',
-        'What is the issue date?',
-        'What is the expiry date?',
-        'What is the address?',
-        'What vehicle categories are allowed?',
-        'What is the citizenship number?'
-      ];
-
-      const extractedData: Partial<LicenseData> = {};
+      // Perform multi-pass OCR with different configurations
+      const ocrResults = await this.performMultiPassOCR(preprocessedImage, onProgress);
       
       onProgress?.('Extracting structured data...', 80);
 
-      // Process questions to extract structured data
-      for (let i = 0; i < questions.length; i++) {
-        try {
-          const result = await this.documentQAPipeline({
-            question: questions[i],
-            image: imageUrl
-          });
+      // Extract structured data using advanced patterns
+      const extractedData = await this.extractLicenseData(ocrResults);
 
-          // Map results to license data fields
-          this.mapAnswerToField(questions[i], result.answer, extractedData);
-          
-          onProgress?.(`Processing field ${i + 1}/${questions.length}...`, 80 + (i / questions.length) * 15);
-        } catch (error) {
-          console.warn(`Failed to process question: ${questions[i]}`, error);
-        }
-      }
+      onProgress?.('Validating and cleaning data...', 95);
 
-      // Fallback pattern matching for any missed fields
-      this.applyPatternMatching(extractedText, extractedData);
-
-      onProgress?.('Validating extracted data...', 95);
-
-      // Validate and clean extracted data
+      // Validate and clean the extracted data
       this.validateAndCleanData(extractedData);
 
-      onProgress?.('AI extraction complete!', 100);
+      onProgress?.('OCR processing complete!', 100);
 
       return {
-        text: extractedText,
-        confidence: this.calculateOverallConfidence(extractedData),
+        text: ocrResults.map(r => r.text).join('\n'),
+        confidence: this.calculateOverallConfidence(extractedData, ocrResults),
         extractedData
       };
 
-    } finally {
-      URL.revokeObjectURL(imageUrl);
+    } catch (error) {
+      console.error('Enhanced OCR Error:', error);
+      throw new Error('OCR processing failed. Please ensure good lighting and try again.');
     }
   }
 
-  private mapAnswerToField(question: string, answer: string, data: Partial<LicenseData>) {
-    const cleanAnswer = answer?.trim();
-    if (!cleanAnswer || cleanAnswer.toLowerCase() === 'none') return;
+  private async performMultiPassOCR(
+    imageFile: File, 
+    onProgress?: (status: string, progress: number) => void
+  ): Promise<any[]> {
+    if (!this.worker) throw new Error('OCR worker not initialized');
 
-    if (question.includes('license number')) {
-      data.licenseNumber = this.cleanLicenseNumber(cleanAnswer);
-    } else if (question.includes('holder name')) {
-      data.holderName = this.cleanName(cleanAnswer);
-    } else if (question.includes('date of birth')) {
-      data.dateOfBirth = this.parseDate(cleanAnswer);
-    } else if (question.includes('issue date')) {
-      data.issueDate = this.parseDate(cleanAnswer);
-    } else if (question.includes('expiry date')) {
-      data.expiryDate = this.parseDate(cleanAnswer);
-    } else if (question.includes('address')) {
-      data.address = cleanAnswer;
-    } else if (question.includes('vehicle categories')) {
-      data.category = this.parseVehicleCategories(cleanAnswer);
-    } else if (question.includes('citizenship')) {
-      data.citizenshipNo = this.cleanCitizenshipNumber(cleanAnswer);
-    }
+    const results = [];
+
+    // Pass 1: Standard OCR
+    onProgress?.('Pass 1: Standard text recognition...', 35);
+    await this.worker.setParameters({
+      tessedit_page_seg_mode: Tesseract.PSM.SINGLE_BLOCK,
+    });
+    
+    const result1 = await this.worker.recognize(imageFile);
+    results.push(result1.data);
+
+    // Pass 2: Line-by-line analysis
+    onProgress?.('Pass 2: Line-by-line analysis...', 50);
+    await this.worker.setParameters({
+      tessedit_page_seg_mode: Tesseract.PSM.SINGLE_LINE,
+    });
+    
+    const result2 = await this.worker.recognize(imageFile);
+    results.push(result2.data);
+
+    // Pass 3: Word-level analysis for better accuracy
+    onProgress?.('Pass 3: Word-level precision analysis...', 65);
+    await this.worker.setParameters({
+      tessedit_page_seg_mode: Tesseract.PSM.SINGLE_WORD,
+    });
+    
+    const result3 = await this.worker.recognize(imageFile);
+    results.push(result3.data);
+
+    return results;
   }
 
-  private applyPatternMatching(text: string, data: Partial<LicenseData>) {
-    // Nepal license number pattern
-    if (!data.licenseNumber) {
-      const licenseMatch = text.match(/(?:License\s*No\.?\s*:?\s*)?([0-9]{2}-[0-9]{2}-[0-9]{6})/i);
-      if (licenseMatch) {
-        data.licenseNumber = licenseMatch[1];
+  private async extractLicenseData(ocrResults: any[]): Promise<Partial<LicenseData>> {
+    // Combine all OCR text
+    const combinedText = ocrResults.map(r => r.text).join('\n');
+    
+    // Use advanced pattern matching
+    const advancedData = extractWithAdvancedPatterns(combinedText);
+    
+    // Use contextual analysis
+    const contextualData = extractWithContextualAnalysis(combinedText);
+    
+    // Merge results, giving priority to advanced patterns
+    return { ...contextualData, ...advancedData };
+  }
+
+  private validateAndCleanData(data: Partial<LicenseData>) {
+    // Clean and validate license number
+    if (data.licenseNumber) {
+      data.licenseNumber = this.cleanLicenseNumber(data.licenseNumber);
+      if (!this.isValidLicenseNumber(data.licenseNumber)) {
+        delete data.licenseNumber;
       }
     }
 
-    // Date patterns (DD/MM/YYYY or DD-MM-YYYY)
-    const dateMatches = text.match(/\b\d{1,2}[\/\-]\d{1,2}[\/\-]\d{4}\b/g);
-    if (dateMatches && dateMatches.length >= 2) {
-      if (!data.issueDate) data.issueDate = dateMatches[0];
-      if (!data.expiryDate) data.expiryDate = dateMatches[1];
-    }
-
-    // Citizenship number pattern
-    if (!data.citizenshipNo) {
-      const citizenshipMatch = text.match(/([0-9]{1,3}[-\/]?[0-9]{1,3}[-\/]?[0-9]{1,5})/);
-      if (citizenshipMatch) {
-        data.citizenshipNo = citizenshipMatch[1];
+    // Clean and validate names
+    if (data.holderName) {
+      data.holderName = this.cleanName(data.holderName);
+      if (data.holderName.length < 2) {
+        delete data.holderName;
       }
     }
+
+    if (data.fatherOrHusbandName) {
+      data.fatherOrHusbandName = this.cleanName(data.fatherOrHusbandName);
+      if (data.fatherOrHusbandName.length < 2) {
+        delete data.fatherOrHusbandName;
+      }
+    }
+
+    // Clean and validate dates
+    ['dateOfBirth', 'issueDate', 'expiryDate'].forEach(field => {
+      if (data[field as keyof LicenseData]) {
+        const cleanedDate = this.cleanDate(data[field as keyof LicenseData] as string);
+        if (this.isValidDate(cleanedDate)) {
+          (data as any)[field] = cleanedDate;
+        } else {
+          delete (data as any)[field];
+        }
+      }
+    });
+
+    // Clean citizenship number
+    if (data.citizenshipNo) {
+      data.citizenshipNo = this.cleanCitizenshipNumber(data.citizenshipNo);
+      if (!this.isValidCitizenshipNumber(data.citizenshipNo)) {
+        delete data.citizenshipNo;
+      }
+    }
+
+    // Clean phone number
+    if (data.phoneNo) {
+      data.phoneNo = this.cleanPhoneNumber(data.phoneNo);
+      if (!this.isValidPhoneNumber(data.phoneNo)) {
+        delete data.phoneNo;
+      }
+    }
+
+    // Remove empty fields
+    Object.keys(data).forEach(key => {
+      const value = data[key as keyof LicenseData];
+      if (!value || (typeof value === 'string' && value.trim().length === 0)) {
+        delete data[key as keyof LicenseData];
+      }
+    });
   }
 
   private cleanLicenseNumber(value: string): string {
-    return value.replace(/[^\d\-]/g, '').slice(0, 11);
+    // Remove extra spaces and normalize format
+    return value.replace(/[^\d\-]/g, '')
+                .replace(/(\d{2})(\d{2})(\d{6})/, '$1-$2-$3')
+                .slice(0, 11);
+  }
+
+  private isValidLicenseNumber(value: string): boolean {
+    return /^\d{2}-\d{2}-\d{6}$/.test(value);
   }
 
   private cleanName(value: string): string {
-    return value.replace(/[^a-zA-Z\s]/g, '').trim();
+    return value.replace(/[^a-zA-Z\s]/g, '')
+                .replace(/\s+/g, ' ')
+                .trim()
+                .toLowerCase()
+                .replace(/\b\w/g, l => l.toUpperCase());
   }
 
-  private cleanCitizenshipNumber(value: string): string {
-    return value.replace(/[^\d\-\/]/g, '');
-  }
-
-  private parseDate(value: string): string {
-    // Try to standardize date format
-    const dateMatch = value.match(/(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})/);
+  private cleanDate(value: string): string {
+    // Try to parse and standardize date format
+    const dateMatch = value.match(/(\d{1,2})[\/\-\.](\d{1,2})[\/\-\.](\d{4})/);
     if (dateMatch) {
       const [, day, month, year] = dateMatch;
       return `${day.padStart(2, '0')}/${month.padStart(2, '0')}/${year}`;
@@ -193,33 +208,49 @@ class EnhancedOCRService {
     return value;
   }
 
-  private parseVehicleCategories(value: string): string {
-    // Extract vehicle categories (A, B, C, etc.)
-    const categories = value.match(/[A-Z]/g);
-    return categories ? categories.join(', ') : value;
+  private isValidDate(value: string): boolean {
+    const dateMatch = value.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+    if (!dateMatch) return false;
+    
+    const [, day, month, year] = dateMatch;
+    const date = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
+    return date.getFullYear() === parseInt(year) &&
+           date.getMonth() === parseInt(month) - 1 &&
+           date.getDate() === parseInt(day);
   }
 
-  private validateAndCleanData(data: Partial<LicenseData>) {
-    // Remove empty or invalid fields
-    Object.keys(data).forEach(key => {
-      const value = data[key as keyof LicenseData];
-      if (!value || typeof value === 'string' && value.trim().length === 0) {
-        delete data[key as keyof LicenseData];
-      }
-    });
+  private cleanCitizenshipNumber(value: string): string {
+    return value.replace(/[^\d\-\/]/g, '');
   }
 
-  private calculateOverallConfidence(data: Partial<LicenseData>): number {
-    const totalFields = 8; // Total expected fields
+  private isValidCitizenshipNumber(value: string): boolean {
+    return /^\d{1,3}[-\/]?\d{1,3}[-\/]?\d{1,5}$/.test(value);
+  }
+
+  private cleanPhoneNumber(value: string): string {
+    return value.replace(/[^\d]/g, '');
+  }
+
+  private isValidPhoneNumber(value: string): boolean {
+    return /^9\d{9}$/.test(value) || /^\d{10}$/.test(value);
+  }
+
+  private calculateOverallConfidence(data: Partial<LicenseData>, ocrResults: any[]): number {
+    const totalFields = 13; // Total expected fields
     const extractedFields = Object.keys(data).length;
-    return Math.min((extractedFields / totalFields) * 100, 95);
+    const avgOCRConfidence = ocrResults.reduce((sum, r) => sum + (r.confidence || 0), 0) / ocrResults.length;
+    
+    const dataQuality = (extractedFields / totalFields) * 100;
+    const ocrQuality = avgOCRConfidence;
+    
+    return Math.round((dataQuality * 0.7 + ocrQuality * 0.3));
   }
 
   async dispose() {
-    // Clean up pipelines if needed
-    this.documentQAPipeline = null;
-    this.ocrPipeline = null;
-    this.isInitialized = false;
+    if (this.worker) {
+      await this.worker.terminate();
+      this.worker = null;
+    }
   }
 }
 

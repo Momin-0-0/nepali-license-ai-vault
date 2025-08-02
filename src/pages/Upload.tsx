@@ -223,10 +223,10 @@ const Upload = () => {
                 Nepal License Scanner (XX-XXX-XXXXXX)
               </h1>
               <p className="text-xl text-gray-700 mb-2">
-                🤖 AI-Powered extraction with Hugging Face Transformers
+                🚀 Enhanced AI-powered extraction with advanced algorithms
               </p>
               <p className="text-gray-600 max-w-2xl mx-auto">
-                Advanced document understanding models for superior accuracy
+                Multi-pass OCR with intelligent pattern recognition for superior accuracy
               </p>
             </div>
 
