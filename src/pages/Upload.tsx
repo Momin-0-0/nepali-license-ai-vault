@@ -7,7 +7,7 @@ import { CheckCircle, CreditCard, Cpu, Shield, Zap, User, MapPin, Phone, Calenda
 import { useToast } from "@/hooks/use-toast";
 import { useOfflineSync } from "@/hooks/useOfflineSync";
 import { useLocalStorage } from "@/hooks/useLocalStorage";
-import { useOCRProcessor } from "@/hooks/useOCRProcessor";
+import { useEnhancedOCR } from "@/hooks/useEnhancedOCR";
 import { validateLicenseData } from "@/utils/dataValidation";
 import { LicenseData } from "@/types/license";
 import LicenseForm from "@/components/LicenseForm";
@@ -44,7 +44,7 @@ const Upload = () => {
   const { toast } = useToast();
   const { isOnline } = useOfflineSync();
   
-  // Use the new OCR processor hook
+  // Use the enhanced AI OCR processor hook
   const {
     processImage,
     cancelProcessing,
@@ -52,7 +52,7 @@ const Upload = () => {
     progress,
     currentStep: ocrStep,
     error: ocrError
-  } = useOCRProcessor();
+  } = useEnhancedOCR();
 
   useEffect(() => {
     if (!user) {
@@ -66,9 +66,7 @@ const Upload = () => {
     setCurrentStep(2);
 
     try {
-      const extractedData = await processImage(file, (progress) => {
-        console.log('OCR Progress:', progress);
-      });
+      const extractedData = await processImage(file);
 
       if (extractedData && Object.keys(extractedData).length > 0) {
         // Merge extracted data with existing data
@@ -225,10 +223,10 @@ const Upload = () => {
                 Nepal License Scanner (XX-XXX-XXXXXX)
               </h1>
               <p className="text-xl text-gray-700 mb-2">
-                Advanced AI extraction for Nepal driving license format
+                🤖 AI-Powered extraction with Hugging Face Transformers
               </p>
               <p className="text-gray-600 max-w-2xl mx-auto">
-                Enhanced OCR with improved accuracy and better error handling
+                Advanced document understanding models for superior accuracy
               </p>
             </div>
 

@@ -39,7 +39,7 @@ const OCRProgressIndicator = ({
               )}
               <div>
                 <p className="font-medium text-gray-800">
-                  {error ? 'Processing Failed' : progress === 100 ? 'Complete!' : 'Processing Nepal License'}
+                  {error ? 'AI Processing Failed' : progress === 100 ? 'AI Extraction Complete!' : 'AI-Powered License Processing'}
                 </p>
                 <p className="text-sm text-gray-600">{currentStep}</p>
               </div>
@@ -90,7 +90,7 @@ const OCRProgressIndicator = ({
           {progress === 100 && !error && (
             <div className="bg-green-50 border border-green-200 rounded-lg p-3">
               <p className="text-sm text-green-700 font-medium">
-                Nepal license data extracted successfully! Please review the information below.
+                ✨ AI successfully extracted Nepal license data with enhanced accuracy! Please review the information below.
               </p>
             </div>
           )}
