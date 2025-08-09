@@ -8,12 +8,14 @@ export const extractWithAdvancedPatterns = (text: string): Partial<LicenseData> 
   
   console.log('🔍 Advanced pattern extraction on text:', cleanText.substring(0, 200));
   
-  // Enhanced license number extraction with multiple formats
+  // Enhanced license number extraction for new format (XX-XX-XXXXXXXX)
   const licensePatterns = [
-    // Standard Nepal format variations
+    // New Nepal format (03-06-01416052)
+    /(?:License\s*Number|D\.?L\.?\s*No\.?|License\s*No\.?)\s*[:\-]?\s*(\d{2}[-\s]?\d{2}[-\s]?\d{8})/gi,
+    /(\d{2}[-\s]\d{2}[-\s]\d{8})(?=\s|\n|$)/g,
+    // Standard Nepal format variations (fallback)
     /(?:D\.?L\.?\s*No\.?|License\s*No\.?|LIC\s*NO)\s*[:\-]?\s*(\d{2}[-\s]?\d{2,3}[-\s]?\d{6,9})/gi,
     /(\d{2}[-\s]\d{2,3}[-\s]\d{6,9})(?=\s|\n|$)/g,
-    /(\d{2}\s*\d{2,3}\s*\d{6,9})(?=\s|\n|$)/g,
     // Numeric only patterns
     /(?:D\.?L\.?\s*No\.?|License\s*No\.?)\s*[:\-]?\s*(\d{11,13})/gi,
     /^(\d{11,13})$/gm
@@ -76,10 +78,10 @@ export const extractWithAdvancedPatterns = (text: string): Partial<LicenseData> 
       pattern.lastIndex = 0;
       const match = pattern.exec(cleanText);
       if (match && match[1]) {
-        const isoDate = convertNepalDateToISO(match[1]);
-        if (isoDate && /^\d{4}-\d{2}-\d{2}$/.test(isoDate)) {
-          (data as any)[field] = isoDate;
-          console.log(`✅ ${field} found:`, isoDate);
+        const formattedDate = convertNepalDateToISO(match[1]);
+        if (formattedDate && /^\d{2}-\d{2}-\d{4}$/.test(formattedDate)) {
+          (data as any)[field] = formattedDate;
+          console.log(`✅ ${field} found:`, formattedDate);
           break;
         }
       }
@@ -162,10 +164,13 @@ export const extractWithAdvancedPatterns = (text: string): Partial<LicenseData> 
     }
   }
   
-  // Enhanced citizenship number extraction
+  // Enhanced citizenship number extraction for new format (11 digits)
   const citizenshipPatterns = [
+    /(?:Citizenship\s*Number|नागरिकता\s*नं)\s*[:\-]?\s*(\d{11})/gi,
+    /(?:Citizenship|नागरिकता)\s*[:\-]?\s*(\d{11})/gi,
+    /(\d{11})(?=\s|\n|$)/g,
+    // Fallback patterns
     /(?:Citizenship|नागरिकता)\s*[:\-]?\s*(\d{2}[-\s]?\d{2}[-\s]?\d{2}[-\s]?\d{5})/gi,
-    /(?:Citizenship|नागरिकता)\s*[:\-]?\s*(\d{10,15})/gi,
     /(\d{2}[-\s]\d{2}[-\s]\d{2}[-\s]\d{5})/g
   ];
   
@@ -236,16 +241,16 @@ export const extractWithContextualAnalysis = (text: string): Partial<LicenseData
     // Date detection with context
     const dateMatch = line.match(/(\d{1,2}[-\/]\d{1,2}[-\/]\d{4})/);
     if (dateMatch) {
-      const isoDate = convertNepalDateToISO(dateMatch[1]);
-      if (isoDate && /^\d{4}-\d{2}-\d{2}$/.test(isoDate)) {
+      const formattedDate = convertNepalDateToISO(dateMatch[1]);
+      if (formattedDate && /^\d{2}-\d{2}-\d{4}$/.test(formattedDate)) {
         if (!data.issueDate && (/issue|doi|जारी/.test(context) || i < lines.length / 2)) {
-          data.issueDate = isoDate;
+          data.issueDate = formattedDate;
           console.log('✅ Contextual issue date:', data.issueDate);
         } else if (!data.expiryDate && (/expiry|doe|valid|समाप्ति/.test(context) || i > lines.length / 2)) {
-          data.expiryDate = isoDate;
+          data.expiryDate = formattedDate;
           console.log('✅ Contextual expiry date:', data.expiryDate);
         } else if (!data.dateOfBirth && /birth|dob|जन्म/.test(context)) {
-          data.dateOfBirth = isoDate;
+          data.dateOfBirth = formattedDate;
           console.log('✅ Contextual birth date:', data.dateOfBirth);
         }
       }
@@ -540,25 +545,31 @@ export const validateNepalLicenseNumber = (licenseNumber: string): boolean => {
 export const convertNepalDateToISO = (dateString: string): string => {
   console.log('Converting date:', dateString);
   
-  const isoMatch = dateString.match(/(\d{4})-(\d{2})-(\d{2})/);
-  if (isoMatch) {
-    return dateString;
-  }
-  
+  // Check if already in DD-MM-YYYY format (target format)
   const ddmmMatch = dateString.match(/(\d{1,2})-(\d{1,2})-(\d{4})/);
   if (ddmmMatch) {
     const [, day, month, year] = ddmmMatch;
-    const isoDate = `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
-    console.log('Converted DD-MM-YYYY to ISO:', isoDate);
-    return isoDate;
+    const formattedDate = `${day.padStart(2, '0')}-${month.padStart(2, '0')}-${year}`;
+    console.log('Formatted to DD-MM-YYYY:', formattedDate);
+    return formattedDate;
   }
   
+  // Convert from slash format to DD-MM-YYYY
   const slashMatch = dateString.match(/(\d{1,2})\/(\d{1,2})\/(\d{4})/);
   if (slashMatch) {
     const [, day, month, year] = slashMatch;
-    const isoDate = `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
-    console.log('Converted DD/MM/YYYY to ISO:', isoDate);
-    return isoDate;
+    const formattedDate = `${day.padStart(2, '0')}-${month.padStart(2, '0')}-${year}`;
+    console.log('Converted DD/MM/YYYY to DD-MM-YYYY:', formattedDate);
+    return formattedDate;
+  }
+  
+  // Convert from ISO format to DD-MM-YYYY
+  const isoMatch = dateString.match(/(\d{4})-(\d{2})-(\d{2})/);
+  if (isoMatch) {
+    const [, year, month, day] = isoMatch;
+    const formattedDate = `${day}-${month}-${year}`;
+    console.log('Converted ISO to DD-MM-YYYY:', formattedDate);
+    return formattedDate;
   }
   
   console.log('Could not convert date format:', dateString);
@@ -627,4 +638,22 @@ export const validateAndCleanupNepalData = (data: Partial<LicenseData>): Partial
   });
   
   return cleaned;
+};
+
+// Format data to match exact JSON structure
+export const formatExtractedData = (data: Partial<LicenseData>) => {
+  const formatted: any = {};
+  
+  if (data.licenseNumber) formatted["License Number"] = data.licenseNumber;
+  if (data.holderName) formatted["Name"] = data.holderName;
+  if (data.address) formatted["Address"] = data.address;
+  if (data.dateOfBirth) formatted["Date of Birth"] = data.dateOfBirth;
+  if (data.citizenshipNo) formatted["Citizenship Number"] = data.citizenshipNo;
+  if (data.phoneNo) formatted["Phone Number"] = data.phoneNo;
+  if (data.bloodGroup) formatted["Blood Group"] = data.bloodGroup;
+  if (data.issueDate) formatted["Issue Date"] = data.issueDate;
+  if (data.expiryDate) formatted["Expiry Date"] = data.expiryDate;
+  if (data.category) formatted["Category"] = data.category;
+  
+  return formatted;
 };
