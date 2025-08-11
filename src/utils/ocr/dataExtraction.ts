@@ -89,17 +89,21 @@ export const extractWithAdvancedPatterns = (text: string): Partial<LicenseData> 
     if ((data as any)[field]) break;
   }
   
-  // Enhanced address extraction
+  // Enhanced address extraction (multi-line aware)
   const addressPatterns = [
-    /(?:Address|ठेगाना)\s*[:\-]?\s*([A-Za-z0-9\-,\s]{8,80})(?=\s*(?:DOB|D\.O\.B|Father|F\/H|Phone|Category))/gi,
-    /(?:Address|ठेगाना)\s*[:\-]?\s*([A-Za-z0-9\-,\s]{8,80})\s*$/gmi
+    /(?:Address|ठेगाना)\s*[:\-]?\s*([\s\S]{8,120}?)(?=\s*(?:D\.\s*O\.\s*B|DOB|Birth|F\/?H|Father|Husband|Citizenship|Passport|Phone|Category|D\.\s*O\.\s*I|D\.\s*O\.\s*E|Expiry|$))/gi,
+    /(?:Address|ठेगाना)\s*[:\-]?\s*([A-Za-z0-9\-,\s]{8,120})\s*$/gmi
   ];
   
   for (const pattern of addressPatterns) {
     pattern.lastIndex = 0;
-    const match = pattern.exec(cleanText);
+    const match = pattern.exec(text); // use raw text to preserve newlines
     if (match && match[1]) {
-      const address = match[1].trim().replace(/\s+/g, ' ');
+      const address = match[1]
+        .replace(/\s*\n\s*/g, ', ')
+        .replace(/\s{2,}/g, ' ')
+        .replace(/,\s*,/g, ',')
+        .trim();
       if (address.length >= 8) {
         data.address = address;
         console.log('✅ Address found:', data.address);

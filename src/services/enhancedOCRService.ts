@@ -180,14 +180,35 @@ class EnhancedOCRService {
   }
 
   private cleanLicenseNumber(value: string): string {
-    // Remove extra spaces and normalize format
-    return value.replace(/[^\d\-]/g, '')
-                .replace(/(\d{2})(\d{2})(\d{6})/, '$1-$2-$3')
-                .slice(0, 11);
+    // Normalize common OCR confusions and format to new Nepal spec (XX-XX-XXXXXXXX) with fallback (XX-XXX-XXXXXX)
+    const normalized = value
+      .replace(/[O]/g, '0')
+      .replace(/[Il|]/g, '1')
+      .replace(/S/g, '5')
+      .replace(/B/g, '8')
+      .replace(/Z/g, '2')
+      .replace(/[–—−]/g, '-')
+      .replace(/\s+/g, '')
+      .replace(/[^0-9-]/g, '');
+
+    // Extract digits only and format
+    const digits = normalized.replace(/[^0-9]/g, '');
+
+    if (digits.length >= 12) {
+      const d = digits.slice(0, 12);
+      return `${d.slice(0, 2)}-${d.slice(2, 4)}-${d.slice(4, 12)}`;
+    }
+
+    if (digits.length >= 11) {
+      const d = digits.slice(0, 11);
+      return `${d.slice(0, 2)}-${d.slice(2, 5)}-${d.slice(5, 11)}`;
+    }
+
+    return normalized;
   }
 
   private isValidLicenseNumber(value: string): boolean {
-    return /^\d{2}-\d{2}-\d{6}$/.test(value);
+    return /^(?:\d{2}-\d{2}-\d{8}|\d{2}-\d{3}-\d{6})$/.test(value);
   }
 
   private cleanName(value: string): string {
@@ -199,19 +220,24 @@ class EnhancedOCRService {
   }
 
   private cleanDate(value: string): string {
-    // Try to parse and standardize date format
-    const dateMatch = value.match(/(\d{1,2})[\/\-\.](\d{1,2})[\/\-\.](\d{4})/);
+    // Normalize separators and common OCR confusions, output DD-MM-YYYY
+    const normalized = value
+      .replace(/[O]/g, '0')
+      .replace(/[–—−]/g, '-')
+      .replace(/[\.\/]/g, '-')
+      .trim();
+    const dateMatch = normalized.match(/(\d{1,2})-(\d{1,2})-(\d{4})/);
     if (dateMatch) {
       const [, day, month, year] = dateMatch;
-      return `${day.padStart(2, '0')}/${month.padStart(2, '0')}/${year}`;
+      return `${day.padStart(2, '0')}-${month.padStart(2, '0')}-${year}`;
     }
     return value;
   }
 
   private isValidDate(value: string): boolean {
-    const dateMatch = value.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+    const dateMatch = value.match(/^(\d{2})-(\d{2})-(\d{4})$/);
     if (!dateMatch) return false;
-    
+
     const [, day, month, year] = dateMatch;
     const date = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
     return date.getFullYear() === parseInt(year) &&
@@ -220,11 +246,13 @@ class EnhancedOCRService {
   }
 
   private cleanCitizenshipNumber(value: string): string {
-    return value.replace(/[^\d\-\/]/g, '');
+    const digits = value.replace(/O/g, '0').replace(/[^\d]/g, '');
+    if (digits.length >= 11) return digits.slice(0, 11);
+    return digits;
   }
 
   private isValidCitizenshipNumber(value: string): boolean {
-    return /^\d{1,3}[-\/]?\d{1,3}[-\/]?\d{1,5}$/.test(value);
+    return /^(?:\d{11}|\d{2}-\d{2}-\d{2}-\d{5})$/.test(value);
   }
 
   private cleanPhoneNumber(value: string): string {
