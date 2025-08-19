@@ -105,20 +105,88 @@ class EnhancedOCRService {
   }
 
   private async extractLicenseData(ocrResults: any[]): Promise<Partial<LicenseData>> {
-    // Combine all OCR text
-    const combinedText = ocrResults.map(r => r.text).join('\n');
+    console.log('🔍 Starting enhanced data extraction...');
     
+    // Combine all OCR text
+    const allText = ocrResults.map(result => result.text).join('\n');
+    const allWords = ocrResults.flatMap(result => result.data?.words || []);
+    const allLines = ocrResults.flatMap(result => result.data?.lines || []);
+    
+    // Get confidence from best result
+    const confidence = Math.max(...ocrResults.map(r => r.confidence || 0));
+
+    // Extract using multiple strategies
+    const extractedData = await this.performComprehensiveExtraction(
+      allText, 
+      allWords, 
+      allLines, 
+      confidence
+    );
+
+    // Validate and clean the extracted data with proper field mapping
+    const validatedData = this.validateAndCleanData(extractedData);
+    
+    // Map to required JSON format
+    const formattedData = this.mapToRequiredFormat(validatedData);
+    
+    console.log('✅ Final extracted data:', formattedData);
+    return formattedData;
+  }
+
+  private async performComprehensiveExtraction(
+    text: string,
+    words: any[],
+    lines: any[],
+    confidence: number
+  ): Promise<Partial<LicenseData>> {
     // Use advanced pattern matching
-    const advancedData = extractWithAdvancedPatterns(combinedText);
+    const advancedData = await extractWithAdvancedPatterns(text);
     
     // Use contextual analysis
-    const contextualData = extractWithContextualAnalysis(combinedText);
+    const contextualData = await extractWithContextualAnalysis(text);
     
     // Merge results, giving priority to advanced patterns
     return { ...contextualData, ...advancedData };
   }
 
-  private validateAndCleanData(data: Partial<LicenseData>) {
+  private mapToRequiredFormat(data: Partial<LicenseData>): Partial<LicenseData> {
+    return {
+      DL_No: data.licenseNumber || "",
+      Blood_Group: data.bloodGroup || "",
+      Name: data.holderName || "",
+      Address: data.address || "",
+      Province: data.province || this.extractProvince(data.address || ""),
+      Date_of_Birth: data.dateOfBirth || "",
+      Father_Husband_Name: data.fatherHusbandName || data.fatherOrHusbandName || "",
+      Citizenship_No: data.citizenshipNumber || data.citizenshipNo || "",
+      Passport_No: data.passportNumber || data.passportNo || "",
+      Phone_No: data.phoneNumber || data.phoneNo || "",
+      DOI: data.issueDate || "",
+      DOE: data.expiryDate || "",
+      Category: data.category || ""
+    } as Partial<LicenseData>;
+  }
+
+  private extractProvince(address: string): string {
+    const provinces = [
+      'Gandaki Province',
+      'Province No. 1',
+      'Madhesh Province', 
+      'Bagmati Province',
+      'Lumbini Province',
+      'Karnali Province',
+      'Sudurpashchim Province'
+    ];
+    
+    for (const province of provinces) {
+      if (address.toLowerCase().includes(province.toLowerCase())) {
+        return `${province}, Nepal`;
+      }
+    }
+    return "Nepal";
+  }
+
+  private validateAndCleanData(data: Partial<LicenseData>): Partial<LicenseData> {
     // Clean and validate license number
     if (data.licenseNumber) {
       data.licenseNumber = this.cleanLicenseNumber(data.licenseNumber);
@@ -132,6 +200,13 @@ class EnhancedOCRService {
       data.holderName = this.cleanName(data.holderName);
       if (data.holderName.length < 2) {
         delete data.holderName;
+      }
+    }
+
+    if (data.fatherHusbandName) {
+      data.fatherHusbandName = this.cleanName(data.fatherHusbandName);
+      if (data.fatherHusbandName.length < 2) {
+        delete data.fatherHusbandName;
       }
     }
 
@@ -154,7 +229,14 @@ class EnhancedOCRService {
       }
     });
 
-    // Clean citizenship number
+    // Clean citizenship number (both field names)
+    if (data.citizenshipNumber) {
+      data.citizenshipNumber = this.cleanCitizenshipNumber(data.citizenshipNumber);
+      if (!this.isValidCitizenshipNumber(data.citizenshipNumber)) {
+        delete data.citizenshipNumber;
+      }
+    }
+
     if (data.citizenshipNo) {
       data.citizenshipNo = this.cleanCitizenshipNumber(data.citizenshipNo);
       if (!this.isValidCitizenshipNumber(data.citizenshipNo)) {
@@ -162,7 +244,14 @@ class EnhancedOCRService {
       }
     }
 
-    // Clean phone number
+    // Clean phone number (both field names)
+    if (data.phoneNumber) {
+      data.phoneNumber = this.cleanPhoneNumber(data.phoneNumber);
+      if (!this.isValidPhoneNumber(data.phoneNumber)) {
+        delete data.phoneNumber;
+      }
+    }
+
     if (data.phoneNo) {
       data.phoneNo = this.cleanPhoneNumber(data.phoneNo);
       if (!this.isValidPhoneNumber(data.phoneNo)) {
@@ -177,6 +266,8 @@ class EnhancedOCRService {
         delete data[key as keyof LicenseData];
       }
     });
+
+    return data;
   }
 
   private cleanLicenseNumber(value: string): string {
@@ -246,9 +337,22 @@ class EnhancedOCRService {
   }
 
   private cleanCitizenshipNumber(value: string): string {
-    const digits = value.replace(/O/g, '0').replace(/[^\d]/g, '');
-    if (digits.length >= 11) return digits.slice(0, 11);
-    return digits;
+    // Normalize OCR confusions and format to XX-XX-XX-XXXXX
+    const normalized = value
+      .replace(/O/g, '0')
+      .replace(/[Il|]/g, '1')
+      .replace(/S/g, '5')
+      .replace(/[–—−]/g, '-')
+      .replace(/\s+/g, '');
+    
+    const digits = normalized.replace(/[^0-9]/g, '');
+    
+    if (digits.length >= 11) {
+      const d = digits.slice(0, 11);
+      return `${d.slice(0, 2)}-${d.slice(2, 4)}-${d.slice(4, 6)}-${d.slice(6, 11)}`;
+    }
+    
+    return normalized;
   }
 
   private isValidCitizenshipNumber(value: string): boolean {

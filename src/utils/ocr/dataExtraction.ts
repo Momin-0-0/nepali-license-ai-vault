@@ -614,7 +614,7 @@ export const validateAndCleanupNepalData = (data: Partial<LicenseData>): Partial
   
   ['dateOfBirth', 'issueDate', 'expiryDate'].forEach(dateField => {
     const dateValue = data[dateField as keyof LicenseData];
-    if (dateValue && /^\d{4}-\d{2}-\d{2}$/.test(dateValue)) {
+    if (dateValue && typeof dateValue === 'string' && /^\d{2}-\d{2}-\d{4}$/.test(dateValue)) {
       (cleaned as any)[dateField] = dateValue;
     }
   });
