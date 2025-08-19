@@ -644,20 +644,54 @@ export const validateAndCleanupNepalData = (data: Partial<LicenseData>): Partial
   return cleaned;
 };
 
-// Format data to match exact JSON structure
+// Format data to match exact JSON structure as specified for Nepali Driving License OCR
 export const formatExtractedData = (data: Partial<LicenseData>) => {
-  const formatted: any = {};
-  
-  if (data.licenseNumber) formatted["License Number"] = data.licenseNumber;
-  if (data.holderName) formatted["Name"] = data.holderName;
-  if (data.address) formatted["Address"] = data.address;
-  if (data.dateOfBirth) formatted["Date of Birth"] = data.dateOfBirth;
-  if (data.citizenshipNo) formatted["Citizenship Number"] = data.citizenshipNo;
-  if (data.phoneNo) formatted["Phone Number"] = data.phoneNo;
-  if (data.bloodGroup) formatted["Blood Group"] = data.bloodGroup;
-  if (data.issueDate) formatted["Issue Date"] = data.issueDate;
-  if (data.expiryDate) formatted["Expiry Date"] = data.expiryDate;
-  if (data.category) formatted["Category"] = data.category;
-  
+  const formatted = {
+    DL_No: data.licenseNumber || "",
+    Blood_Group: data.bloodGroup || "",
+    Name: data.holderName || "",
+    Address: data.address || "",
+    Province: data.province || inferProvinceFromAddress(data.address || ""),
+    Date_of_Birth: data.dateOfBirth || "",
+    Father_Husband_Name: data.fatherHusbandName || data.fatherOrHusbandName || "",
+    Citizenship_No: data.citizenshipNumber || data.citizenshipNo || "",
+    Passport_No: data.passportNumber || data.passportNo || "",
+    Phone_No: data.phoneNumber || data.phoneNo || "",
+    DOI: data.issueDate || "",
+    DOE: data.expiryDate || "",
+    Category: data.category || ""
+  };
+
   return formatted;
 };
+
+function inferProvinceFromAddress(address: string): string {
+  if (!address) return "Nepal";
+  
+  const addressLower = address.toLowerCase();
+  
+  // Province mapping based on districts and major cities
+  if (/gandaki|pokhara|gorkha|lamjung|tanahu|syangja|kaski|parbat|baglung|myagdi|mustang|manang/i.test(addressLower)) {
+    return "Gandaki Province, Nepal";
+  }
+  if (/kathmandu|bhaktapur|lalitpur|chitwan|dhading|nuwakot|rasuwa|makwanpur|sindhuli|ramechhap|dolakha|sindhupalchok|kavrepalanchok/i.test(addressLower)) {
+    return "Bagmati Province, Nepal";
+  }
+  if (/butwal|palpa|gulmi|arghakhanchi|kapilvastu|rupandehi|nawalparasi|dang|banke|bardiya|pyuthan|rolpa|rukum/i.test(addressLower)) {
+    return "Lumbini Province, Nepal";
+  }
+  if (/biratnagar|dharan|itahari|damak|birtamod|jhapa|morang|sunsari|ilam|panchthar|taplejung|sankhuwasabha|terhathum|bhojpur|dhankuta|solukhumbu|okhaldhunga|khotang|udayapur/i.test(addressLower)) {
+    return "Province No. 1, Nepal";
+  }
+  if (/janakpur|birgunj|hetauda|rajbiraj|lahan|siraha|saptari|dhanusha|mahottari|sarlahi|rautahat|bara|parsa/i.test(addressLower)) {
+    return "Madhesh Province, Nepal";
+  }
+  if (/surkhet|dailekh|jajarkot|kalikot|jumla|mugu|dolpa|humla|salyan/i.test(addressLower)) {
+    return "Karnali Province, Nepal";
+  }
+  if (/dhangadhi|mahendranagar|tikapur|kailali|kanchanpur|dadeldhura|baitadi|darchula|bajhang|bajura|achham|doti/i.test(addressLower)) {
+    return "Sudurpashchim Province, Nepal";
+  }
+  
+  return "Nepal";
+}

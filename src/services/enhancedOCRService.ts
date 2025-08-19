@@ -150,6 +150,7 @@ class EnhancedOCRService {
   }
 
   private mapToRequiredFormat(data: Partial<LicenseData>): Partial<LicenseData> {
+    // Follow exact OCR extraction specifications for Nepali Driving Licenses
     return {
       DL_No: data.licenseNumber || "",
       Blood_Group: data.bloodGroup || "",
@@ -168,21 +169,41 @@ class EnhancedOCRService {
   }
 
   private extractProvince(address: string): string {
+    if (!address) return "Nepal";
+    
     const provinces = [
-      'Gandaki Province',
-      'Province No. 1',
-      'Madhesh Province', 
-      'Bagmati Province',
-      'Lumbini Province',
-      'Karnali Province',
-      'Sudurpashchim Province'
+      { pattern: /gandaki/i, name: 'Gandaki Province' },
+      { pattern: /province\s*no\.?\s*1|koshi/i, name: 'Province No. 1' },
+      { pattern: /madhesh|province\s*no\.?\s*2/i, name: 'Madhesh Province' },
+      { pattern: /bagmati|province\s*no\.?\s*3/i, name: 'Bagmati Province' },
+      { pattern: /lumbini|province\s*no\.?\s*5/i, name: 'Lumbini Province' },
+      { pattern: /karnali|province\s*no\.?\s*6/i, name: 'Karnali Province' },
+      { pattern: /sudurpashchim|province\s*no\.?\s*7/i, name: 'Sudurpashchim Province' }
     ];
     
     for (const province of provinces) {
-      if (address.toLowerCase().includes(province.toLowerCase())) {
-        return `${province}, Nepal`;
+      if (province.pattern.test(address)) {
+        return `${province.name}, Nepal`;
       }
     }
+    
+    // Check for major cities/districts to infer province
+    const cityProvinceMap = [
+      { pattern: /kathmandu|bhaktapur|lalitpur|chitwan|dhading|nuwakot|rasuwa|makwanpur|sindhuli|ramechhap|dolakha|sindhupalchok|kavrepalanchok/i, province: 'Bagmati Province' },
+      { pattern: /pokhara|gorkha|lamjung|tanahu|syangja|kaski|parbat|baglung|myagdi|mustang|manang/i, province: 'Gandaki Province' },
+      { pattern: /butwal|palpa|gulmi|arghakhanchi|kapilvastu|rupandehi|nawalparasi|dang|banke|bardiya|pyuthan|rolpa|rukum/i, province: 'Lumbini Province' },
+      { pattern: /biratnagar|dharan|itahari|damak|birtamod|jhapa|morang|sunsari|ilam|panchthar|taplejung|sankhuwasabha|terhathum|bhojpur|dhankuta|solukhumbu|okhaldhunga|khotang|udayapur/i, province: 'Province No. 1' },
+      { pattern: /janakpur|birgunj|hetauda|rajbiraj|lahan|siraha|saptari|dhanusha|mahottari|sarlahi|rautahat|bara|parsa/i, province: 'Madhesh Province' },
+      { pattern: /surkhet|dailekh|jajarkot|kalikot|jumla|mugu|dolpa|humla|salyan/i, province: 'Karnali Province' },
+      { pattern: /dhangadhi|mahendranagar|tikapur|kailali|kanchanpur|dadeldhura|baitadi|darchula|bajhang|bajura|achham|doti/i, province: 'Sudurpashchim Province' }
+    ];
+    
+    for (const city of cityProvinceMap) {
+      if (city.pattern.test(address)) {
+        return `${city.province}, Nepal`;
+      }
+    }
+    
     return "Nepal";
   }
 
